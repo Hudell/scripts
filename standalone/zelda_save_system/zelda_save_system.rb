@@ -1,3 +1,6 @@
+# Zelda Save System for VXAce by Hudell
+# Free for non commercial and commercial use
+# Contact : brian@hudell.com
 module Hudell_Zelda_Save_System
   NUMBER_OF_SAVES = 3
   NAME_MAX_CHARACTERS = 10
@@ -44,8 +47,6 @@ class Scene_File < Scene_MenuBase
     @savefile_viewport.rect.y = @help_window.height
     @savefile_viewport.rect.height -= @help_window.height
     @savefile_viewport.rect.x = 0
-    #@savefile_viewport.rect.width -= @savefile_viewport.rect.x
-    #@savefile_viewport.rect.height = Graphics.height - (@help_window.height * 3)
   end  
   
   def start
@@ -59,7 +60,6 @@ class Scene_File < Scene_MenuBase
   
   def savefile_height
     saves_height = Graphics.height - (@help_window.height * 3)
-    #@savefile_viewport.rect.height / visible_max
     return saves_height / visible_max
   end
     
