@@ -1,0 +1,673 @@
+$imported ||= {}
+$imported[:HudellPhone] = 1.0
+
+unless $imported.has_key?(:HudellWindows)
+	raise "Hudell's Phone system requires HudellWindows!\n"
+end
+
+module HudellEngine
+	ICON_MESSAGE_READ = 103
+	ICON_MESSAGE_UNREAD = 178
+	CELLPHONE_ICON = 130
+	VARIABLE_INDEX = 1 #This variable is used to store all phone system information
+	VARIABLE_LAST_REPLIED_MESSAGE = 2 #This variable is used to indicate the last message the player replied
+	SWITCH_INDEX = 2 #This switch fill be turned on everytime the player replies to a message
+	PLAYER_NAME = 'Lucinda Blume'
+	FONT_SIZE = 16
+
+	def self.getInboxMessages
+		data = []
+
+		return data if $game_variables[VARIABLE_INDEX].nil?
+		return data unless $game_variables[VARIABLE_INDEX].is_a? Hash
+
+		data = $game_variables[VARIABLE_INDEX].keys
+		return data
+	end
+
+	def self.saveCustomMessage(subject, text, sender, responseVariableIndex, responses, switch_index)
+		$game_variables[VARIABLE_INDEX] = {} if $game_variables[VARIABLE_INDEX].nil?
+		$game_variables[VARIABLE_INDEX] = {} unless $game_variables[VARIABLE_INDEX].is_a? Hash
+
+		if !responseVariableIndex.nil? and responseVariableIndex > 0
+			messageId = responseVariableIndex
+		else
+			messageId = "auto_" + $game_variables[VARIABLE_INDEX].length.to_s
+		end
+
+
+		newMessage = {
+			:subject => subject,
+			:text => text,
+			:sender => sender,
+			:read => false,
+			:varIdx => responseVariableIndex,
+			:responses => responses,
+			:switchIdx => switch_index
+		}
+
+		$game_variables[VARIABLE_INDEX][messageId] = newMessage
+
+		if !responseVariableIndex.nil? and responseVariableIndex > 0
+			$game_variables[responseVariableIndex] = 0
+		end
+	end
+
+	def self.receiveMessage(subject, text, sender, responseVariableIndex = 0, responses = [], switch_index = -1)
+		saveCustomMessage(subject, text, sender, responseVariableIndex, responses, switch_index)
+		
+		showMessageNotification
+	end
+
+	def self.deleteMessage(message_id)
+		return unless messageReceived?(message_id)
+
+		$game_variables[VARIABLE_INDEX].delete(message_id)
+	end
+
+	def self.sendReply(message_id, reply_index)
+		varIdx = getMessageVariableIndex(message_id)
+		switchIdx = getMessageSwitchIndex(message_id)
+
+		return if varIdx.nil?
+		return if varIdx <= 0
+
+		$game_variables[VARIABLE_LAST_REPLIED_MESSAGE] = varIdx
+		$game_variables[varIdx] = reply_index
+
+		$game_switches[switchIdx] = true
+	end
+
+	def self.showMessageNotification
+		return if $game_variables[VARIABLE_INDEX].nil?
+		return unless $game_variables[VARIABLE_INDEX].is_a? Hash
+
+		messages = $game_variables[VARIABLE_INDEX]
+		unread_count = 0
+		last_sender = ''
+
+		messages.each_with_index do |item|
+			msg = item[1]
+			next if msg[:read]
+
+			unread_count += 1
+
+			unless last_sender.nil?
+				last_sender = msg[:sender] if last_sender == ''
+				if msg[:sender] != last_sender
+					last_sender = nil
+				end
+			end
+		end
+
+		if $imported.has_key?(:HudellPopup)
+			message = ''
+			case unread_count
+				when 0
+					return
+				when 1
+					message = 'New message'
+				else
+					message = unread_count.to_s + ' new messages'
+			end
+
+			unless last_sender.nil? or last_sender == ''
+				message = message + ' by ' + last_sender
+			end
+			
+			killPopups
+			showIconPopup(CELLPHONE_ICON, message, true) if message != ''
+		end
+	end
+
+	def self.messageReceived?(messageId)
+		return false if $game_variables[VARIABLE_INDEX].nil?
+		return false unless $game_variables[VARIABLE_INDEX].is_a? Hash
+		return false unless $game_variables[VARIABLE_INDEX].has_key? messageId
+		return false if $game_variables[VARIABLE_INDEX][messageId].nil?
+		return true
+	end
+
+	def self.changeMessageStatus(messageId, read)
+		return false unless messageReceived?(messageId)
+		$game_variables[VARIABLE_INDEX][messageId][:read] = read
+	end
+
+	def self.markMessageAsRead(messageId)
+		changeMessageStatus(messageId, true)
+	end
+
+	def self.markMessageAsUnRead(messageId)
+		changeMessageStatus(messageId, false)
+	end
+
+	def self.getMessageResponses(messageId)
+		return [] unless messageReceived?(messageId)
+		return $game_variables[VARIABLE_INDEX][messageId][:responses].dup
+	end
+
+	def self.getMessage(messageId)
+		return nil unless messageReceived?(messageId)
+		return $game_variables[VARIABLE_INDEX][messageId]
+	end
+
+	def self.getMessageVariableIndex(messageId)
+		return nil unless messageReceived?(messageId)
+		return $game_variables[VARIABLE_INDEX][messageId][:varIdx]
+	end
+
+	def self.getMessageSwitchIndex(messageId)
+		return SWITCH_INDEX unless messageReceived?(messageId)
+		idx = $game_variables[VARIABLE_INDEX][messageId][:switchIdx]
+
+		return SWITCH_INDEX if idx.nil?
+		return SWITCH_INDEX if idx <= 0
+		return idx
+	end
+
+	def self.getMessageSubject(messageId)
+		return '' unless messageReceived?(messageId)
+		return $game_variables[VARIABLE_INDEX][messageId][:subject]
+	end
+
+	def self.isMessageRead?(messageId)
+		return false unless messageReceived?(messageId)
+
+		$game_variables[VARIABLE_INDEX][messageId][:read]
+	end
+
+	def self.isMessageRepliedTo?(messageId)
+		message = getMessage(messageId)
+		return false if message.nil?
+
+		return true if message[:varIdx].nil? or message[:varIdx] <= 0
+		varIdx = message[:varIdx]
+		return $game_variables[varIdx] > 0
+	end
+
+	def self.getMessageSender(messageId)
+		return '' unless messageReceived?(messageId)
+		return $game_variables[VARIABLE_INDEX][messageId][:sender]
+	end
+
+	def self.getMessageReceiver(messageId)
+		return PLAYER_NAME
+	end
+
+	def self.getMessageText(messageId)
+		return '' unless messageReceived?(messageId)
+		return $game_variables[VARIABLE_INDEX][messageId][:text]
+	end
+
+	def self.getReplyString
+		return 'Reply'
+	end
+
+	def self.getDeleteString
+		return 'Delete'
+	end
+
+	class << self
+		alias_method(:hudell_phone_on_scene_call, :on_scene_call)
+	end
+
+	def self.on_scene_call
+		hudell_phone_on_scene_call
+
+		if SceneManager::scene_is?(Scene_Map)
+			restorePopups
+		end
+	end
+
+	def self.restorePopups
+		showMessageNotification
+	end
+end
+
+class Scene_HudellMessageList < Scene_MenuBase
+	def start
+		super
+		create_title_window
+		create_message_list_window
+		create_reply_button
+		create_message_window
+	end
+
+	def terminate
+		super
+		@message_window = nil
+		@title_window = nil
+		@inbox_window = nil
+		@reply_button = nil
+	end
+
+	def create_title_window
+		@title_window = Window_HudellTitle.new(0, 1)
+		@title_window.viewport = @viewport
+		@title_window.set_text('INBOX')
+	end
+
+	def create_message_list_window
+		x = 0
+		w = Graphics.width * 0.4
+		y = @title_window.height
+		h = Graphics.height - y
+
+		@inbox_window = Window_HudellMessageList.new(x, y, w, h)
+		@inbox_window.viewport = @viewport
+		@inbox_window.refresh
+		@inbox_window.select(0)
+		@inbox_window.activate
+
+		@inbox_window.set_handler(:ok, method(:on_message_ok))
+		@inbox_window.set_handler(:cancel, method(:on_message_cancel))
+	end
+
+	def create_reply_button
+		@reply_button = Window_HudellReplyButton.new()
+		@reply_button.viewport = @viewport
+
+		@reply_button.set_handler(:ok, method(:on_reply_button_ok))
+		@reply_button.set_handler(:cancel, method(:on_reply_button_cancel))
+
+		@inbox_window.reply_button = @reply_button
+	end
+
+	def create_draft_window
+		@draft_window = Window_SelectReply.new(@inbox_window.item)
+		@draft_window.viewport = @viewport
+		@draft_window.set_handler(:ok, method(:on_draft_window_ok))
+		@draft_window.set_handler(:cancel, method(:on_draft_window_cancel))
+		@draft_window.select(0)
+		@reply_button.deactivate
+		@draft_window.activate
+	end
+
+	def create_delete_window
+		@delete_window = Window_DeleteMessage.new(@inbox_window.item)
+		@delete_window.viewport = @viewport
+		@delete_window.set_handler(:ok, method(:on_delete_window_ok))
+		@delete_window.set_handler(:cancel, method(:on_delete_window_cancel))
+		@delete_window.select(0)
+		@reply_button.deactivate
+		@delete_window.activate
+	end
+
+	def create_message_window
+		w = Graphics.width * 0.6
+		x = Graphics.width - w
+		y = @title_window.height
+		h = Graphics.height - y
+
+		h -= @reply_button.height if @reply_button
+
+		@message_window = Window_HudellMessage.new(x, y, w, h)
+		@title_window.viewport = @viewport
+		@inbox_window.message_window = @message_window
+	end
+
+	def on_message_ok
+		@reply_button.select(0)
+		@reply_button.activate
+		@inbox_window.deactivate
+	end
+
+	def on_message_cancel
+		return_scene
+	end
+
+	def on_reply_button_ok
+		if @reply_button.item == :reply
+			create_draft_window
+		else
+			create_delete_window
+		end
+	end
+
+	def on_delete_window_ok
+		HudellEngine::deleteMessage(@inbox_window.item) if @delete_window.index == 0
+
+		@delete_window.deactivate
+		@delete_window.hide
+		@delete_window.close
+		@delete_window = nil
+		@reply_button.deactivate
+		@reply_button.select(-1)
+		@inbox_window.select(-1)
+		@inbox_window.refresh
+		@inbox_window.select(0)
+		@inbox_window.activate
+	end
+
+	def on_delete_window_cancel
+		@delete_window.deactivate
+		@delete_window.hide
+		@delete_window.close
+		@delete_window = nil
+
+		@reply_button.activate
+	end
+
+	def on_draft_window_ok
+		messages = HudellEngine::getMessageResponses(@inbox_window.item)
+		p @draft_window.index
+		p messages.length
+
+		if @draft_window.index < messages.length
+			HudellEngine::sendReply(@inbox_window.item, @draft_window.index + 1)
+		end
+
+		on_draft_window_cancel
+		@reply_button.refresh
+		
+		on_reply_button_cancel
+	end
+
+	def on_draft_window_cancel
+		@draft_window.deactivate
+		@draft_window.hide
+		@draft_window.close
+		@draft_window = nil
+
+		@reply_button.activate
+	end
+
+	def on_reply_button_cancel
+		@inbox_window.activate
+		@reply_button.deactivate
+		@reply_button.select(-1)
+	end
+end
+
+class Window_HudellMessageList < Window_HudellSelectable
+	def make_item_list
+		@data = HudellEngine::getInboxMessages
+	end
+
+	def enable?(item)
+		return false if item.nil?
+		return true
+	end
+
+	def col_max
+		return 1
+	end	
+
+	def reply_button=(value)
+		@reply_button = value
+		if @reply_button and index >= 0
+			@reply_button.msgId = @data[index]
+			@reply_button.refresh
+		end
+	end
+
+	def message_window=(value)
+		@message_window = value
+		if @message_window
+			@message_window.set_message(item)
+			@message_window.refresh
+		end
+	end
+
+	def select(index)
+		super
+		@message_window.set_message(item) if @message_window
+		@reply_button.msgId = item if @reply_button
+		@reply_button.refresh if @reply_button
+	end
+
+	def draw_item(index)
+		item = @data[index]
+
+		if item
+			rect = item_rect(index)
+
+			change_color(normal_color, enable?(item))
+			rect.width -= 4
+
+			if HudellEngine::isMessageRead?(item)
+				icon_idx = HudellEngine::ICON_MESSAGE_READ
+			else
+				icon_idx = HudellEngine::ICON_MESSAGE_UNREAD
+			end
+
+			contents.font.size = HudellEngine::FONT_SIZE
+			draw_icon(icon_idx, rect.x, rect.y, enable?(item))
+			draw_text(rect.x + 24, rect.y, rect.width - 150, line_height, HudellEngine::getMessageSender(item))
+			draw_text(rect.x + rect.width - 150, rect.y, 150, line_height, HudellEngine::getMessageSubject(item), 2)
+		end
+	end	
+end
+
+class Window_HudellReplyButton < Window_HudellSelectable
+	def initialize()
+		w = Graphics.width * 0.6
+		x = Graphics.width - w
+		h = fitting_height(1)
+		y = Graphics.height - h
+
+		super(x, y, w, h)
+		refresh
+	end
+
+	def make_item_list
+		@data = []
+		return if @msgId == nil
+
+		if HudellEngine::isMessageRepliedTo?(@msgId)
+			@data << :delete
+		else
+			@data << :reply
+		end
+	end
+
+	def enable?(item)
+		return false if item.nil?
+		return true
+		#  if item == :reply
+		# return false if item == :delete
+		# return false
+	end
+
+	def col_max
+		return 1
+	end
+
+	def draw_item(index)
+		rect = item_rect(index)
+		change_color(normal_color, true)
+		rect.width -= 4
+
+		if (@data[index] == :reply)
+			draw_text(rect.x, rect.y, rect.width, line_height, HudellEngine::getReplyString, 1)
+		else
+			draw_text(rect.x, rect.y, rect.width, line_height, HudellEngine::getDeleteString, 1)
+		end
+	end
+
+	def msgId=(value)
+		@msgId = value
+	end
+end
+
+class Window_HudellMessage < Window_Base
+	def initialize(x, y, w, h)
+		super(x, y, w, h)
+		refresh
+	end
+
+	def clear
+		@message = nil
+		refresh
+	end
+
+	def refresh
+		contents.clear
+
+		return if @message.nil?
+
+		y = 0
+
+		subject = HudellEngine::getMessageSubject(@message)
+		sender = HudellEngine::getMessageSender(@message)
+		receiver = HudellEngine::getMessageReceiver(@message)
+		text = HudellEngine::getMessageText(@message)
+
+		change_color(normal_color, true)
+
+		contents.font.size = HudellEngine::FONT_SIZE
+		draw_text_ex2(4, y, subject)
+		y += line_height
+
+		draw_text_ex2(4, y, 'From: ' + sender)
+		y += line_height
+
+		draw_text_ex2(4, y, 'To: ' + receiver)
+		
+		y += (line_height * 2)
+
+		draw_text_ex2(4, y, text)
+	end	
+
+	def set_message(message)
+		if message != @message
+			@message = message
+			refresh
+
+			HudellEngine::markMessageAsRead(message) unless message.nil?
+		end
+	end	
+end
+
+class Window_DeleteMessage < Window_HudellSelectable
+	def initialize(message_id)
+		@message_id = message_id
+		
+		x = Graphics.width * 0.2
+		w = Graphics.width * 0.6
+		h = fitting_height(2)
+		y = (Graphics.height / 2) - (h / 2)
+
+		super(x, y, w, h)
+		refresh
+	end
+
+	def col_max
+		return 1
+	end	
+
+	def draw_item(index)
+		item = @data[index]
+		if item
+			rect = item_rect(index)
+			rect.width -= 4
+
+			change_color(normal_color, true)
+			draw_text(rect.x, rect.y, rect.width, line_height, item)
+		end
+	end
+
+	def make_item_list
+		@data = ['Yes', 'No']
+	end
+end
+
+class Window_SelectReply < Window_HudellSelectable
+	def initialize(message_id)
+		@message_id = message_id
+		make_item_list
+		
+		x = Graphics.width * 0.1
+		w = Graphics.width * 0.8
+		h = fitting_height(@data.length)
+		y = (Graphics.height / 2) - (h / 2)
+
+		super(x, y, w, h)
+		refresh
+	end
+
+	def draw_item(index)
+		item = @data[index]
+		if item
+			rect = item_rect(index)
+			rect.width -= 4
+
+			change_color(normal_color, enable?(item))
+			draw_text(rect.x, rect.y, rect.width, line_height, @strings[item])
+		end
+	end
+
+	def col_max
+		1
+	end	
+
+	def make_item_list
+		@strings = HudellEngine::getMessageResponses(@message_id)
+		@data = []
+
+		unless @strings.nil?
+			@strings.each do
+				@data << @data.length
+			end
+		end
+
+		@strings << 'Do not reply'
+		@data << @data.length
+	end
+
+	# def item_max
+	# 	@data ? @data.length : 1
+	# end
+
+	# def refresh
+	# 	make_item_list
+	# 	create_contents
+	# 	draw_all_items
+	# end	
+
+	# def draw_all_items
+	# 	item_max.times {|i| draw_item(i) }
+	# end
+end
+
+class Window_MenuCommand < Window_Command
+	alias :hudell_add_original_commands :add_original_commands
+	def add_original_commands
+		add_command("Phone", :phone, main_commands_enabled)
+		hudell_add_original_commands
+	end	
+end
+
+class Scene_Menu < Scene_MenuBase
+	alias :hudell_create_command_window :create_command_window
+
+	def create_command_window
+		hudell_create_command_window
+
+		@command_window.set_handler(:phone, method(:command_phone))
+	end
+
+	def command_phone
+		SceneManager.call(Scene_HudellMessageList)
+	end
+end
+
+
+
+module SceneManager
+	class << self
+		alias_method(:hudell_phone_call, :call)
+		alias_method(:hudell_phone_return, :return)
+	end
+
+	def self.call(scene_class)
+		hudell_phone_call(scene_class)
+
+		HudellEngine::on_scene_call
+	end
+
+	def self.return
+		hudell_phone_return
+		HudellEngine::on_scene_call
+	end
+end
