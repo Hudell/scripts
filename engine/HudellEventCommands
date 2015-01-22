@@ -1,0 +1,16 @@
+$imported ||= {}
+$imported[:HudellEventCommands] = 1.0
+
+class Game_Interpreter
+	def call_common_event(event_id)
+		@params = [event_id]
+		command_117
+	end
+end
+
+
+module HudellEngine
+	def self.call_common_event(event_id)
+		$game_map.interpreter.call_common_event(event_id)
+	end
+end
