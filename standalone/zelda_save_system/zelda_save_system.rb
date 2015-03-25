@@ -1,6 +1,7 @@
 # Zelda Save System for VXAce by Hudell
 # Free for non commercial and commercial use
-# Contact : brian@hudell.com
+# Contact : brian@hudell.com 
+# URL: www.hudell.com
 module Hudell_Zelda_Save_System
   NUMBER_OF_SAVES = 3
   NAME_MAX_CHARACTERS = 10
@@ -101,7 +102,7 @@ class Game_System
 end
 
 class Window_SaveOption < Window_Base
-  attr_accessor :selected
+  attr_reader :selected
   
   def standard_padding
     return 8
@@ -120,10 +121,23 @@ class Window_SaveOption < Window_Base
     refresh
     @selected = false
   end  
+
+  def update_cursor
+    if @selected
+      cursor_rect.set(0, 0, contents.width, contents.height)
+    else
+      cursor_rect.empty
+    end
+  end
   
   def refresh
     contents.clear
     change_color(normal_color, SceneManager::scene_is?(Scene_Load))
+  end
+
+  def selected=(value)
+    @selected = value
+    update_cursor
   end
 end
 
@@ -327,21 +341,18 @@ class Scene_CopySave < Scene_AdditionalSave
 end
 
 class Scene_Save < Scene_File
-  alias :hudell_zelda_save_system_on_savefile_ok_save :on_savefile_ok
-	def on_savefile_ok
-		super
-    
-    return hudell_zelda_save_system_on_savefile_ok_save if @index < Hudell_Zelda_Save_System::NUMBER_OF_SAVES
-
-    Sound.play_buzzer
-	end	
-
 	def help_window_text
 		'Please select a file'
 	end
   
   def on_savefile_ok
     super
+
+    unless @index < Hudell_Zelda_Save_System::NUMBER_OF_SAVES
+      Sound.play_buzzer
+      return
+    end
+
     if DataManager.save_game(@index)
       on_save_success
     else
@@ -526,5 +537,10 @@ end
 class Window_TitleCommand < Window_Command
   def continue_enabled
     return true
+  end
+
+  def make_command_list
+    add_command(Vocab::continue, :continue, continue_enabled)
+    add_command(Vocab::shutdown, :shutdown)
   end
 end
