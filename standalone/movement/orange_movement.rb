@@ -5,10 +5,14 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 1.0
+# Version: 1.1
 # You're free to use this script on any project
 #
+# Change Log:
 #
+# v1.1: Added Auto_Avoid_Retain_Direction and Auto_Avoid_Only_When_Dashing configurations
+#
+
 module OrangeMovement
   #------------------------------------------------------------
   #------------------------------------------------------------
@@ -31,10 +35,16 @@ module OrangeMovement
   #Auto Avoid: If enabled, the player will automatically walk around small obstacles.
   Auto_Avoid = true
 
-  #How many tiles the player can walk diagonally to automatically avoid a blocked tile
+  #How many tiles the player can walk on a different direction to automatically avoid a blocked tile
   #Values smaller than the step size won't have any effect
   #Set to false to disable it
   Auto_Avoid_Max_Offset = 1.0
+
+  #If true, the player won't turn when walking on another direction for the auto_avoid by offset effect
+  Auto_Avoid_Retain_Direction = false
+
+  #If this is setto true, the auto avoid by offset will only be available when the player is dashing
+  Auto_Avoid_Offset_Only_When_Dashing = true
 
   #Auto Jump: If enabled, the player will automatically jump over small obstacles
   # If set to false, the feature won't even be loaded on rpg maker, to avoid possible script conflicts.
@@ -541,6 +551,8 @@ if OrangeMovement::Enabled
       end
 
       def do_movement(d)
+        @avoid_delay = nil
+
         case d 
           when 2, 4, 6, 8
             move_straight(d, true)
@@ -579,6 +591,10 @@ if OrangeMovement::Enabled
 
       #If the first try failed, try again considering the offset
       def try_to_avoid_again(d)
+        if Auto_Avoid_Offset_Only_When_Dashing == true
+          return false unless dash?
+        end
+
         max_offset = Auto_Avoid_Max_Offset
 
         if d == Direction.left || d == Direction.right
@@ -589,13 +605,13 @@ if OrangeMovement::Enabled
           while offset <= max_offset
             if diagonal_passable?(@x, @y + offset, d, Direction.down)
               do_movement(Direction.down)
-              # set_direction(d)
+              set_direction(d) if Auto_Avoid_Retain_Direction == true
 
               return true
             elsif diagonal_passable?(@x, @y - offset, d, Direction.up)
               do_movement(Direction.up)
 
-              # set_direction(d)
+              set_direction(d) if Auto_Avoid_Retain_Direction == true
               return true
             end
 
@@ -606,13 +622,13 @@ if OrangeMovement::Enabled
           while offset <= max_offset
             if diagonal_passable?(@x + offset, @y, Direction.right, d)
               do_movement(Direction.right)
-              # set_direction(d)
+              set_direction(d) if Auto_Avoid_Retain_Direction == true
 
               return true
             elsif diagonal_passable?(@x - offset, @y, Direction.left, d)
               do_movement(Direction.left)
 
-              # set_direction(d)
+              set_direction(d) if Auto_Avoid_Retain_Direction == true
               return true
             end
 
@@ -710,7 +726,6 @@ if OrangeMovement::Enabled
           if passable_any_direction?(destination_x, destination_y)
             if (Auto_Jump_Region_Id == true) || ($game_map.region_id(origin_x, origin_y) == Auto_Jump_Region_Id) || ($game_map.region_id(destination_x, destination_y) == Auto_Jump_Region_Id)
               jumped = jump_if_clear(jump_x, jump_y)
-              print "jumped 1\n"
               p destination_x
               p destination_y
             end
