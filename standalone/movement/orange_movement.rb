@@ -26,7 +26,7 @@ module OrangeMovement
   # 32 - Will move 1px at each step
   # Other values between 1 and 32 may or may not work.
 
-  Tile_Sections = 5
+  Tile_Sections = 4
 
   #Auto Avoid: If enabled, the player will automatically walk around small obstacles.
   Auto_Avoid = true
