@@ -5,10 +5,13 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 1.1
+# Version: 1.2
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v1.2: Added several new configs: Auto_Avoid_Diagonally, Auto_Avoid_Walking_Around, Auto_Avoid_Diagonally_Only_When_Dashing,
+# Auto_Avoid_Events_Diagonally, Auto_Avoid_Events_Walking_Around, Auto_Avoid_Try_Jumping_First, Auto_Avoid_Events_Max_Offset
 #
 # v1.1: Added Auto_Avoid_Retain_Direction and Auto_Avoid_Only_When_Dashing configurations
 #
@@ -35,16 +38,32 @@ module OrangeMovement
   #Auto Avoid: If enabled, the player will automatically walk around small obstacles.
   Auto_Avoid = true
 
+  #If this is set to false, the script won't try to avoid an obstacle by walking diagonally
+  Auto_Avoid_Diagonally = true
+  #If this is set to false, the script won't try to avoid an obstacle by walking in a different direction
+  Auto_Avoid_Walking_Around = true
+
   #How many tiles the player can walk on a different direction to automatically avoid a blocked tile
   #Values smaller than the step size won't have any effect
   #Set to false to disable it
-  Auto_Avoid_Max_Offset = 1.0
+  Auto_Avoid_Max_Offset = 0.75
 
   #If true, the player won't turn when walking on another direction for the auto_avoid by offset effect
-  Auto_Avoid_Retain_Direction = false
+  Auto_Avoid_Retain_Direction = true
 
-  #If this is setto true, the auto avoid by offset will only be available when the player is dashing
-  Auto_Avoid_Offset_Only_When_Dashing = true
+  #If this is set to true, the auto avoid diagonally will only be available when the player is dashing
+  Auto_Avoid_Diagonally_Only_When_Dashing = false
+  
+  #If this is set to true, the auto avoid by offset will only be available when the player is dashing
+  Auto_Avoid_Offset_Only_When_Dashing = false
+
+  #Should the player also avoid events?
+  Auto_Avoid_Events_Diagonally = true
+  Auto_Avoid_Events_Walking_Around = true
+  Auto_Avoid_Events_Max_Offset = 0.35
+
+  #If this is set to true, the script will try to jump before trying to avoid an obstacle by walking diagonally
+  Auto_Avoid_Try_Jumping_First = false
 
   #Auto Jump: If enabled, the player will automatically jump over small obstacles
   # If set to false, the feature won't even be loaded on rpg maker, to avoid possible script conflicts.
@@ -57,7 +76,7 @@ module OrangeMovement
   Auto_Jump_Only_When_Dashing = true
 
   #Disables auto jump when the party is bigger than 1
-  Auto_Jump_Only_When_Alone = false
+  Auto_Jump_Only_When_Alone = true
 
   #Sound effect to play when the player jumps
   #You can add more than one SE options by using an array 
@@ -280,7 +299,7 @@ if OrangeMovement::Enabled
       tile_y
     end
 
-    def passable?(x, y, d)
+    def tileset_passable?(x, y, d)
       x2 = $game_map.round_player_x_with_direction(x, d)
       y2 = $game_map.round_player_y_with_direction(y, d)
       return false unless $game_map.valid?(x2, y2)
@@ -288,6 +307,14 @@ if OrangeMovement::Enabled
       return true if @through || debug_through?
       return false unless map_passable?(x, y, d)
       return false unless map_passable?(x2, y2, reverse_dir(d))
+      return true
+    end
+
+    def passable?(x, y, d)
+      return false unless tileset_passable?(x, y, d)
+
+      x2 = $game_map.round_player_x_with_direction(x, d)
+      y2 = $game_map.round_player_y_with_direction(y, d)
 
       return false if collide_with_characters?(x2, y2)
       return true
@@ -492,22 +519,7 @@ if OrangeMovement::Enabled
       set_direction(vert) if @direction == reverse_dir(vert)
     end
 
-    unless OrangeMovement::Auto_Jump == false
-      def events_allow_jump?(destination_x, destination_y)
-        return true if Auto_Jump_Over_Events == true
-        return false if Auto_Jump_Over_Events == false
-
-        #Conditional jumping has not been implemented yet
-        return true
-      end
-
-      alias :hudell_orange_movement_game_player_update :update
-      def update
-        hudell_orange_movement_game_player_update
-        @jump_delay = Auto_Jump_Delay if @jump_delay.nil?
-        @jump_delay -= 1 unless @jump_delay == 0
-      end
-
+    unless OrangeMovement::Auto_Jump == false && OrangeMovement::Auto_Avoid == false
       def move_by_input
         return if !movable? || $game_map.interpreter.running?
 
@@ -524,23 +536,45 @@ if OrangeMovement::Enabled
         if passable?(@x, @y, d)
           do_movement(Input.dir8)
         else
+          tileset_passable = tileset_passable?(@x, @y, d)
           should_try_jumping = true
-          if Auto_Avoid == true
-            should_try_jumping = !try_to_avoid(d)
+          max_offset = Auto_Avoid_Max_Offset
+          should_try_avoiding_diagonally = Auto_Avoid == true
+          should_try_avoiding_walking_around = Auto_Avoid == true && Auto_Avoid_Max_Offset != false
+
+          if tileset_passable
+            x2 = $game_map.round_player_x_with_direction(x, d)
+            y2 = $game_map.round_player_y_with_direction(y, d)
+
+            if collide_with_characters?(x2, y2)
+              if should_try_avoiding_diagonally
+                should_try_avoiding_diagonally = Auto_Avoid_Events_Diagonally
+              end
+              if should_try_avoiding_walking_around
+                should_try_avoiding_walking_around = Auto_Avoid_Events_Walking_Around
+                max_offset = Auto_Avoid_Events_Max_Offset
+              end
+            end
+          end
+
+          if Auto_Avoid_Try_Jumping_First == true
+            return true if call_jump(d)
+            should_try_jumping = false
+          end
+
+          if should_try_avoiding_diagonally
+            if try_to_avoid(d)
+              should_try_jumping = false
+              should_try_avoiding_walking_around = false
+            end
           end
 
           if should_try_jumping
-            if Auto_Jump == true || $game_switches[Auto_Jump]
-              if !Auto_Jump_Only_When_Dashing || dash?
-                if !Auto_Jump_Only_When_Alone || $game_party.members.length == 1
-                  return true if try_to_jump(d)
-                end
-              end
-            end
+            return true if call_jump(d)
+          end
 
-            if Auto_Avoid == true && Auto_Avoid_Max_Offset != false
-              return true if try_to_avoid_again(d)
-            end
+          if should_try_avoiding_walking_around
+            return true if try_to_avoid_again(d, max_offset)
           end
 
           if @direction != d
@@ -550,24 +584,27 @@ if OrangeMovement::Enabled
         end
       end
 
-      def do_movement(d)
-        @avoid_delay = nil
+      def call_jump(d)
+        if Auto_Jump == true || $game_switches[Auto_Jump]
+          if !Auto_Jump_Only_When_Dashing || dash?
+            if !Auto_Jump_Only_When_Alone || $game_party.members.length == 1
+              return true if try_to_jump(d)
+            end
+          end
+        end
 
-        case d 
-          when 2, 4, 6, 8
-            move_straight(d, true)
-          when 1
-            move_diagonal(4, 2)
-          when 3
-            move_diagonal(6, 2)
-          when 7
-            move_diagonal(4, 8)
-          when 9
-            move_diagonal(6, 8)
-        end        
+        return false
       end
+    end
 
+    unless OrangeMovement::Auto_Avoid == false
       def try_to_avoid(d)
+        return false if Auto_Avoid_Diagonally == false
+
+        if Auto_Avoid_Diagonally_Only_When_Dashing == true
+          return false unless dash?
+        end
+
         if d == Direction.left || d == Direction.right
           if diagonal_passable?(@x, @y, d, Direction.down)
             do_movement(d - 3)
@@ -590,12 +627,12 @@ if OrangeMovement::Enabled
       end
 
       #If the first try failed, try again considering the offset
-      def try_to_avoid_again(d)
+      def try_to_avoid_again(d, max_offset)
+        return false if Auto_Avoid_Walking_Around == false
+
         if Auto_Avoid_Offset_Only_When_Dashing == true
           return false unless dash?
         end
-
-        max_offset = Auto_Avoid_Max_Offset
 
         if d == Direction.left || d == Direction.right
           #If the player can't walk diagonally on the current position, but would be able to walk if he were a little higher or lower then move vertically instead
@@ -638,6 +675,42 @@ if OrangeMovement::Enabled
 
         return false
       end
+    end
+
+    unless OrangeMovement::Auto_Jump == false
+      def events_allow_jump?(destination_x, destination_y)
+        return true if Auto_Jump_Over_Events == true
+        return false if Auto_Jump_Over_Events == false
+
+        #Conditional jumping has not been implemented yet
+        return true
+      end
+
+      alias :hudell_orange_movement_game_player_update :update
+      def update
+        hudell_orange_movement_game_player_update
+        @jump_delay = Auto_Jump_Delay if @jump_delay.nil?
+        @jump_delay -= 1 unless @jump_delay == 0
+      end
+
+
+      def do_movement(d)
+        @avoid_delay = nil
+
+        case d 
+          when 2, 4, 6, 8
+            move_straight(d, true)
+          when 1
+            move_diagonal(4, 2)
+          when 3
+            move_diagonal(6, 2)
+          when 7
+            move_diagonal(4, 8)
+          when 9
+            move_diagonal(6, 8)
+        end        
+      end
+
 
       def on_jump
         return if Auto_Jump_Sound_Effect == false
