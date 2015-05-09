@@ -5,10 +5,12 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 1.2
+# Version: 1.3
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v1.3: Fixed a problem where sometimes the player would be able to enter an impassable tile
 #
 # v1.2: Added several new configs: Auto_Avoid_Diagonally, Auto_Avoid_Walking_Around, Auto_Avoid_Diagonally_Only_When_Dashing,
 # Auto_Avoid_Events_Diagonally, Auto_Avoid_Events_Walking_Around, Auto_Avoid_Try_Jumping_First, Auto_Avoid_Events_Max_Offset
@@ -373,9 +375,11 @@ if OrangeMovement::Enabled
           end
         elsif direction_goes_down?(d)
           return false unless $game_map.passable?(tile_x, tile_y, Direction.down)
+          return false unless $game_map.passable?(tile_x, tile_y + 1, Direction.up)
 
           if x_section > 0
             return false unless $game_map.passable?(tile_x + 1, tile_y, Direction.down)
+            return false unless $game_map.passable?(tile_x + 1, tile_y + 1, Direction.up)
           end
 
           if y2_section > 0 && y2_section == (Tile_Sections - 1)
@@ -405,6 +409,7 @@ if OrangeMovement::Enabled
           end
         elsif goes_right
           return false unless $game_map.passable?(tile_x, tile_y, Direction.right)
+          return false unless $game_map.passable?(tile_x + 1, tile_y, Direction.left)
 
           if x2_section > 0 && x2_section == (Tile_Sections - 1)
             return false unless $game_map.passable?(tile2_x, tile2_y, Direction.right)
@@ -412,6 +417,7 @@ if OrangeMovement::Enabled
 
           if y_section > 0
             return false unless $game_map.passable?(tile_x, tile_y + 1, Direction.right)
+            return false unless $game_map.passable?(tile_x + 1, tile_y + 1, Direction.left)
 
             if y_section == (Tile_Sections - 1)
               return false unless $game_map.passable?(tile_x, tile_y, Direction.right)
