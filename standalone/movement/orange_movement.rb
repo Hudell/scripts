@@ -5,10 +5,12 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 1.3
+# Version: 1.4
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v1.4: Fixed a problem with the Auto_Fall feature when used together will pixel movement
 #
 # v1.3: Fixed a problem where sometimes the player would be able to enter an impassable tile
 #
@@ -847,13 +849,23 @@ if OrangeMovement::Enabled
 
       def fall_down
         fall_x = x
+        fall_x2 = x
         jump_y = 1
         fall_y = y + jump_y
 
+        if x != float_x
+          fall_x = float_x.floor
+          fall_x2 = float_x.ceil
+        end
+
+        return false unless $game_map.region_id(fall_x2, fall_y) == Auto_Jump_Fall_Down_Region
+
         #While the region doesn't change, keep falling
-        while $game_map.region_id(fall_x, fall_y) == Auto_Jump_Fall_Down_Region do
+        while $game_map.region_id(fall_x, fall_y) == Auto_Jump_Fall_Down_Region && $game_map.region_id(fall_x2, fall_y) == Auto_Jump_Fall_Down_Region do
+
           #If it's an invalid tile, abort falling
           return false if !$game_map.valid?(fall_x, fall_y)
+          return false if !$game_map.valid?(fall_x2, fall_y)
 
           jump_y += 1
           fall_y = y + jump_y
@@ -866,9 +878,17 @@ if OrangeMovement::Enabled
         jump_x = -1
         fall_x = x + jump_x
         fall_y = y
+        fall_y2 = y
+
+        if y != float_y
+          fall_y = float_y.floor
+          fall_y2 = float_y.ceil
+        end
+
+        return false unless $game_map.region_id(x, fall_y2) == Auto_Jump_Fall_Left_Region
 
         #While the region doesn't change, keep falling
-        while $game_map.region_id(fall_x, fall_y) == Auto_Jump_Fall_Left_Region do
+        while $game_map.region_id(fall_x, fall_y) == Auto_Jump_Fall_Left_Region && $game_map.region_id(fall_x, fall_y2) == Auto_Jump_Fall_Left_Region do
           #If it's an invalid tile, abort falling
           return false if !$game_map.valid?(fall_x, fall_y)
 
@@ -883,9 +903,17 @@ if OrangeMovement::Enabled
         jump_x = 1
         fall_x = x + jump_x
         fall_y = y
+        fall_y2 = y
+
+        if y != float_y
+          fall_y = float_y.floor
+          fall_y2 = float_y.ceil
+        end
+
+        return false unless $game_map.region_id(x, fall_y2) == Auto_Jump_Fall_Right_Region
 
         #While the region doesn't change, keep falling
-        while $game_map.region_id(fall_x, fall_y) == Auto_Jump_Fall_Right_Region do
+        while $game_map.region_id(fall_x, fall_y) == Auto_Jump_Fall_Right_Region && $game_map.region_id(fall_x, fall_y2) == Auto_Jump_Fall_Right_Region do
           #If it's an invalid tile, abort falling
           return false if !$game_map.valid?(fall_x, fall_y)
 
@@ -897,17 +925,25 @@ if OrangeMovement::Enabled
       end
 
       def fall_up
-        drop_x = x
+        fall_x = x
+        fall_x2 = x
         jump_y = -1
-        drop_y = y + jump_y
+        fall_y = y + jump_y
+
+        if x != float_x
+          fall_x = float_x.floor
+          fall_x2 = float_x.ceil
+        end
+
+        return false unless $game_map.region_id(fall_x2, y) == Auto_Jump_Fall_Up_Region        
 
         #While the region doesn't change, keep falling
-        while $game_map.region_id(drop_x, drop_y) == Auto_Jump_Fall_Up_Region do
+        while $game_map.region_id(fall_x, fall_y) == Auto_Jump_Fall_Up_Region && $game_map.region_id(fall_x2, fall_y) == Auto_Jump_Fall_Up_Region do
           #If it's an invalid tile, abort falling
-          return false if !$game_map.valid?(drop_x, drop_y)
+          return false if !$game_map.valid?(fall_x, fall_y)
 
           jump_y -= 1
-          drop_y = y + jump_y
+          fall_y = y + jump_y
         end
 
         return jump_if_clear(0, jump_y, true)
