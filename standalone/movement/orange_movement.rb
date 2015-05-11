@@ -891,6 +891,7 @@ if OrangeMovement::Enabled
         while $game_map.region_id(fall_x, fall_y) == Auto_Jump_Fall_Left_Region && $game_map.region_id(fall_x, fall_y2) == Auto_Jump_Fall_Left_Region do
           #If it's an invalid tile, abort falling
           return false if !$game_map.valid?(fall_x, fall_y)
+          return false if !$game_map.valid?(fall_x, fall_y2)
 
           jump_x -= 1
           fall_x = x + jump_x
@@ -916,6 +917,7 @@ if OrangeMovement::Enabled
         while $game_map.region_id(fall_x, fall_y) == Auto_Jump_Fall_Right_Region && $game_map.region_id(fall_x, fall_y2) == Auto_Jump_Fall_Right_Region do
           #If it's an invalid tile, abort falling
           return false if !$game_map.valid?(fall_x, fall_y)
+          return false if !$game_map.valid?(fall_x, fall_y2)
 
           jump_x += 1
           fall_x = x + jump_x
@@ -941,6 +943,7 @@ if OrangeMovement::Enabled
         while $game_map.region_id(fall_x, fall_y) == Auto_Jump_Fall_Up_Region && $game_map.region_id(fall_x2, fall_y) == Auto_Jump_Fall_Up_Region do
           #If it's an invalid tile, abort falling
           return false if !$game_map.valid?(fall_x, fall_y)
+          return false if !$game_map.valid?(fall_x2, fall_y)
 
           jump_y -= 1
           fall_y = y + jump_y
