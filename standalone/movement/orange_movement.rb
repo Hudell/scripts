@@ -5,10 +5,12 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 1.4
+# Version: 1.5
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v1.5: Added a new setting to disable diagonal movement
 #
 # v1.4: Fixed a problem with the Auto_Fall feature when used together will pixel movement
 #
@@ -38,6 +40,9 @@ module OrangeMovement
   # Other values between 1 and 32 may or may not work.
 
   Tile_Sections = 4
+
+  #Set this to false if you don't want the player to walk diagonally
+  Enable_Diagonal_Movement = true
 
   #Auto Avoid: If enabled, the player will automatically walk around small obstacles.
   Auto_Avoid = true
@@ -542,7 +547,11 @@ if OrangeMovement::Enabled
         end
 
         if passable?(@x, @y, d)
-          do_movement(Input.dir8)
+          unless OrangeMovement::Enable_Diagonal_Movement == false
+            d = Input.dir8
+          end
+
+          do_movement(d)
         else
           tileset_passable = tileset_passable?(@x, @y, d)
           should_try_jumping = true
