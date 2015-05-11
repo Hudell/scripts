@@ -321,6 +321,7 @@ if OrangeMovement::Enabled
 
     def passable?(x, y, d)
       return false unless tileset_passable?(x, y, d)
+      return true if @through || debug_through?
 
       x2 = $game_map.round_player_x_with_direction(x, d)
       y2 = $game_map.round_player_y_with_direction(y, d)
