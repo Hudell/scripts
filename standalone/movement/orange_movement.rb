@@ -5,10 +5,12 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 1.5
+# Version: 1.6
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v1.6: Fixed a problem where the game could crash if the jump feature was disabled
 #
 # v1.5: Added a new setting to disable diagonal movement
 #
@@ -603,7 +605,7 @@ if OrangeMovement::Enabled
       end
 
       def call_jump(d)
-        if Auto_Jump == true || $game_switches[Auto_Jump]
+        if Auto_Jump == true || (Auto_Jump.is_a?(Fixnum) && $game_switches[Auto_Jump])
           if !Auto_Jump_Only_When_Dashing || dash?
             if !Auto_Jump_Only_When_Alone || $game_party.members.length == 1
               return true if try_to_jump(d)
@@ -613,6 +615,23 @@ if OrangeMovement::Enabled
 
         return false
       end
+
+      def do_movement(d)
+        @avoid_delay = nil
+
+        case d 
+          when 2, 4, 6, 8
+            move_straight(d, true)
+          when 1
+            move_diagonal(4, 2)
+          when 3
+            move_diagonal(6, 2)
+          when 7
+            move_diagonal(4, 8)
+          when 9
+            move_diagonal(6, 8)
+        end        
+      end      
     end
 
     unless OrangeMovement::Auto_Avoid == false
@@ -710,25 +729,6 @@ if OrangeMovement::Enabled
         @jump_delay = Auto_Jump_Delay if @jump_delay.nil?
         @jump_delay -= 1 unless @jump_delay == 0
       end
-
-
-      def do_movement(d)
-        @avoid_delay = nil
-
-        case d 
-          when 2, 4, 6, 8
-            move_straight(d, true)
-          when 1
-            move_diagonal(4, 2)
-          when 3
-            move_diagonal(6, 2)
-          when 7
-            move_diagonal(4, 8)
-          when 9
-            move_diagonal(6, 8)
-        end        
-      end
-
 
       def on_jump
         return if Auto_Jump_Sound_Effect == false
