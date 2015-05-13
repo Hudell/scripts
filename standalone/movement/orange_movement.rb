@@ -5,10 +5,12 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 1.7
+# Version: 1.8
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v1.8: Added option to enable / disable the whole script using a switch, fixed a problem where followers wouldn't walk
 #
 # v1.7: Changed the way that the player will walk when using forced Move Routes
 #
@@ -140,6 +142,7 @@ module OrangeMovement
   Auto_Jump_Fall_Up_Region = 8
 
   #If this is set to false, the script won't be loaded by rpg maker
+  #If it's set to an integer value, the script will look for an switch with that ID to determine if the script should be active or not
   Enabled = true
 
   #------------------------------------------------------------
@@ -162,6 +165,13 @@ module OrangeMovement
   def direction_goes_down?(direction)
     return [*1..3].include?(direction)
   end
+
+  def enabled?
+    return true if Enabled == true
+    return false if Enabled == false
+    return $game_switches[Enabled] if Enabled.is_a?(Fixnum)
+    return false
+  end
 end
 
 module Direction
@@ -175,7 +185,7 @@ module Direction
   def self.down_right; 3; end
 end
 
-if OrangeMovement::Enabled
+unless OrangeMovement::Enabled == false
   class Game_Map
     include OrangeMovement
 
@@ -208,32 +218,40 @@ if OrangeMovement::Enabled
     end
 
     def player_x_with_direction(x, d)
-      step_size = Step_Size
-      if $game_player.move_route_forcing
-        step_size = 1
-      end
+      if enabled?
+        step_size = Step_Size
+        if $game_player.move_route_forcing
+          step_size = 1
+        end
 
-      if direction_goes_left?(d)
-        return x - step_size
-      elsif direction_goes_right?(d)
-        return x + step_size
+        if direction_goes_left?(d)
+          return x - step_size
+        elsif direction_goes_right?(d)
+          return x + step_size
+        else
+          return x
+        end
       else
-        return x
+        return x_with_direction(x, d)
       end
     end
 
     def player_y_with_direction(y, d)
-      step_size = Step_Size
-      if $game_player.move_route_forcing
-        step_size = 1
-      end
+      if enabled?
+        step_size = Step_Size
+        if $game_player.move_route_forcing
+          step_size = 1
+        end
 
-      if direction_goes_down?(d)
-        return y + step_size
-      elsif direction_goes_up?(d)
-        return y - step_size
+        if direction_goes_down?(d)
+          return y + step_size
+        elsif direction_goes_up?(d)
+          return y - step_size
+        else
+          return y
+        end
       else
-        return y
+        return y_with_direction(y, d)
       end
     end
 
@@ -331,6 +349,7 @@ if OrangeMovement::Enabled
       return false unless map_passable?(x2, y2, reverse_dir(d))
       return true
     end
+
 
     def passable?(x, y, d)
       return false unless tileset_passable?(x, y, d)
@@ -447,7 +466,9 @@ if OrangeMovement::Enabled
       return true
     end
 
+    alias :hudell_orange_movement_game_player_map_passable? :map_passable?
     def map_passable?(x, y, d)
+      return hudell_orange_movement_game_player_map_passable?(x, y, d) unless enabled?
       tile_x = x.floor
       tile_y = y.floor
 
@@ -492,6 +513,8 @@ if OrangeMovement::Enabled
 
     alias :orange_movement_game_player_start_map_event :start_map_event
     def start_map_event(x, y, triggers, normal)
+      return orange_movement_game_player_start_map_event(x, y, triggers, normal) unless enabled?
+
       run_for_all_positions(x, y) do |block_x, block_y|
         orange_movement_game_player_start_map_event(block_x, block_y, triggers, normal)
       end
@@ -506,9 +529,13 @@ if OrangeMovement::Enabled
       end
     end
 
+    alias :orange_movement_game_player_move_straight :move_straight
     def move_straight(d, turn_ok = true)
+      return orange_movement_game_player_move_straight(d, turn_ok) unless enabled?
+
       @move_succeed = passable?(@x, @y, d)
       if @move_succeed
+        @followers.move
         set_direction(d)
         
         @x = $game_map.round_player_x_with_direction(@x, d)
@@ -523,9 +550,13 @@ if OrangeMovement::Enabled
       end
     end
 
+    alias :orange_movement_game_player_move_diagonal :move_diagonal
     def move_diagonal(horz, vert)
+      return orange_movement_game_player_move_diagonal(horz, vert) unless enabled?
+
       @move_succeed = diagonal_passable?(@x, @y, horz, vert)
       if @move_succeed
+        @followers.move
         @x = $game_map.round_player_x_with_direction(@x, horz)
         @y = $game_map.round_player_y_with_direction(@y, vert)
         @real_x = $game_map.player_x_with_direction(@x, reverse_dir(horz))
@@ -537,7 +568,10 @@ if OrangeMovement::Enabled
     end
 
     unless OrangeMovement::Auto_Jump == false && OrangeMovement::Auto_Avoid == false
+      alias :orange_movement_game_player_move_by_input :move_by_input
       def move_by_input
+        return orange_movement_game_player_move_by_input unless enabled?
+
         return if !movable? || $game_map.interpreter.running?
 
         button = :DOWN
@@ -727,8 +761,10 @@ if OrangeMovement::Enabled
       alias :hudell_orange_movement_game_player_update :update
       def update
         hudell_orange_movement_game_player_update
-        @jump_delay = Auto_Jump_Delay if @jump_delay.nil?
-        @jump_delay -= 1 unless @jump_delay == 0
+        if enabled?
+          @jump_delay = Auto_Jump_Delay if @jump_delay.nil?
+          @jump_delay -= 1 unless @jump_delay == 0
+        end
       end
 
       def on_jump
