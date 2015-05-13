@@ -5,10 +5,12 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 1.6
+# Version: 1.7
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v1.7: Changed the way that the player will walk when using forced Move Routes
 #
 # v1.6: Fixed a problem where the game could crash if the jump feature was disabled
 #
@@ -30,7 +32,6 @@ module OrangeMovement
   #---------------------  CONFIGURATION  ----------------------
   #------------------------------------------------------------
   #------------------------------------------------------------
-
 
   #Tile_Sections - The number of pieces to break the tile into. Must be one of the following values:
   # 1 - Doesn't change anything
@@ -207,20 +208,30 @@ if OrangeMovement::Enabled
     end
 
     def player_x_with_direction(x, d)
+      step_size = Step_Size
+      if $game_player.move_route_forcing
+        step_size = 1
+      end
+
       if direction_goes_left?(d)
-        return x - Step_Size
+        return x - step_size
       elsif direction_goes_right?(d)
-        return x + Step_Size
+        return x + step_size
       else
         return x
       end
     end
 
     def player_y_with_direction(y, d)
+      step_size = Step_Size
+      if $game_player.move_route_forcing
+        step_size = 1
+      end
+
       if direction_goes_down?(d)
-        return y + Step_Size
+        return y + step_size
       elsif direction_goes_up?(d)
-        return y - Step_Size
+        return y - step_size
       else
         return y
       end
@@ -330,16 +341,6 @@ if OrangeMovement::Enabled
 
       return false if collide_with_characters?(x2, y2)
       return true
-    end
-
-    def process_move_command(command)
-      if command.code > 0 && command.code <= 13
-        Tile_Sections.times do
-          super
-        end
-      else
-        super
-      end
     end
 
     def run_for_all_positions(x, y, &block)
