@@ -40,6 +40,10 @@ class Game_CharacterBase
     return 0 if @angle.nil?
     return @angle
   end
+  
+  def angle=(value)
+    @angle = value
+  end
 
   def clear_rotation
     @angle = 0
