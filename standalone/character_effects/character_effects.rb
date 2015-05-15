@@ -5,7 +5,7 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 1.1
+# Version: 1.2
 # You're free to use this script on any project
 
 class Game_CharacterBase
@@ -48,6 +48,22 @@ class Game_CharacterBase
   def clear_rotation
     @angle = 0
   end
+
+  def flash(duration, alpha = 255, red = 255, green = 255, blue = 255)
+    @flash_color = Color.new(red, green, blue, alpha)
+    @flash_duration = duration
+  end
+
+  def clear_flash
+    @flash_color = nil
+    @flash_duration = 0
+  end
+
+  attr_reader :flash_color
+  def flash_duration
+    return 0 if @flash_duration.nil?
+    return @flash_duration
+  end
   
   #Using offset to change positions may break the collision check, so use it with caution
   def offset_x_position(offset)
@@ -72,5 +88,15 @@ class Sprite_Character < Sprite_Base
   def update_other
     hudell_update_other
     self.angle = character.angle
+  end
+
+  alias :hudell_update :update
+  def update
+    hudell_update
+
+    if character.flash_duration > 0
+      self.flash(character.flash_color, character.flash_duration)
+      character.clear_flash
+    end
   end
 end
