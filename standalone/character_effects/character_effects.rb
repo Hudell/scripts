@@ -5,7 +5,7 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 1.2
+# Version: 1.3
 # You're free to use this script on any project
 
 class Game_CharacterBase
@@ -36,6 +36,21 @@ class Game_CharacterBase
     end
   end
 
+  def flash(duration, alpha = 255, red = 255, green = 255, blue = 255)
+    @flash_color = Color.new(red, green, blue, alpha)
+    @flash_duration = duration
+  end
+
+  def flash_loop(duration, times, alpha = 255, red = 255, green = 255, blue = 255)
+    times.times do
+      @flash_color = Color.new(red, green, blue, alpha)
+      @flash_duration = duration
+      duration.times do
+        Fiber.yield
+      end
+    end
+  end
+
   def angle
     return 0 if @angle.nil?
     return @angle
@@ -47,11 +62,6 @@ class Game_CharacterBase
 
   def clear_rotation
     @angle = 0
-  end
-
-  def flash(duration, alpha = 255, red = 255, green = 255, blue = 255)
-    @flash_color = Color.new(red, green, blue, alpha)
-    @flash_duration = duration
   end
 
   def clear_flash
