@@ -5,7 +5,7 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 1.4
+# Version: 1.5
 # You're free to use this script on any project
 
 class Game_CharacterBase
@@ -116,10 +116,10 @@ end
 class Sprite_Character < Sprite_Base
   alias :hudell_update_other :update_other
   def update_other
+    update_origin
     hudell_update_other
 
     self.angle = character.angle
-    update_origin
     update_flash
 
   end
@@ -138,21 +138,23 @@ class Sprite_Character < Sprite_Base
     if @origin_x != character.origin_x
       @original_ox = self.ox if @original_ox.nil?
 
-      self.ox = @original_ox + character.origin_x
       offset_x = (character.origin_x - @origin_x) / 32.0
 
       character.real_x = character.real_x + offset_x
       character.x = character.real_x
+      self.ox = @original_ox + character.origin_x
+      self.x = character.screen_x
     end
 
     if @origin_y != character.origin_y
       @original_oy = self.oy if @original_oy.nil?
 
-      self.oy = @original_oy + character.origin_y
       offset_y = (character.origin_y - @origin_y) / 32.0
 
       character.real_y = character.real_y + offset_y
       character.y = character.real_y
+      self.oy = @original_oy + character.origin_y
+      self.y = character.screen_y
     end
     
     @origin_x = character.origin_x
