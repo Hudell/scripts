@@ -22,7 +22,9 @@ $game_player.angle = 180
 Flashing
 --------
 Use this to flash the character for 10 frames:
+
 $game_player.flash(10)
 
 And this to do a loop of 6 flashes:
+
 $game_player.flash_loop(10, 6)
