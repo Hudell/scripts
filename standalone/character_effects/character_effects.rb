@@ -5,10 +5,15 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 1.3
+# Version: 1.4
 # You're free to use this script on any project
 
 class Game_CharacterBase
+  attr_writer :x
+  attr_writer :y
+  attr_writer :real_x
+  attr_writer :real_y
+
   def shake(x_offset, y_offset, frames)
     (frames / 6).times do
       @x += x_offset
@@ -49,6 +54,21 @@ class Game_CharacterBase
         Fiber.yield
       end
     end
+  end
+
+  def origin_x=(value)
+    @origin_x = value
+  end
+  def origin_x
+    return 0 if @origin_x.nil?
+    return @origin_x
+  end
+  def origin_y=(value)
+    @origin_y = value
+  end
+  def origin_y
+    return 0 if @origin_y.nil?
+    return @origin_y
   end
 
   def angle
@@ -97,16 +117,45 @@ class Sprite_Character < Sprite_Base
   alias :hudell_update_other :update_other
   def update_other
     hudell_update_other
+
     self.angle = character.angle
+    update_origin
+    update_flash
+
   end
 
-  alias :hudell_update :update
-  def update
-    hudell_update
-
+  def update_flash
     if character.flash_duration > 0
       self.flash(character.flash_color, character.flash_duration)
       character.clear_flash
     end
+  end
+
+  def update_origin
+    @origin_x = 0 if @origin_x.nil?
+    @origin_y = 0 if @origin_y.nil?
+    
+    if @origin_x != character.origin_x
+      @original_ox = self.ox if @original_ox.nil?
+
+      self.ox = @original_ox + character.origin_x
+      offset_x = (character.origin_x - @origin_x) / 32.0
+
+      character.real_x = character.real_x + offset_x
+      character.x = character.real_x
+    end
+
+    if @origin_y != character.origin_y
+      @original_oy = self.oy if @original_oy.nil?
+
+      self.oy = @original_oy + character.origin_y
+      offset_y = (character.origin_y - @origin_y) / 32.0
+
+      character.real_y = character.real_y + offset_y
+      character.y = character.real_y
+    end
+    
+    @origin_x = character.origin_x
+    @origin_y = character.origin_y
   end
 end
