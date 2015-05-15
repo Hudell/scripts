@@ -5,7 +5,7 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 1.0
+# Version: 1.1
 # You're free to use this script on any project
 
 class Game_CharacterBase
@@ -40,7 +40,7 @@ class Game_CharacterBase
     return 0 if @angle.nil?
     return @angle
   end
-  
+    
   def angle=(value)
     @angle = value
   end
@@ -48,6 +48,23 @@ class Game_CharacterBase
   def clear_rotation
     @angle = 0
   end
+  
+  #Using offset to change positions may break the collision check, so use it with caution
+  def offset_x_position(offset)
+    offset = offset % 32
+    return if offset <= 0
+    
+    change = 1.0 / 32.0 * offset
+    @x = @x.floor + change
+  end
+
+  def offset_y_position(offset)
+    offset = offset % 32
+    return if offset <= 0
+    
+    change = 1.0 / 32.0 * offset
+    @y = @y.floor + change
+  end  
 end
 
 class Sprite_Character < Sprite_Base
