@@ -14,7 +14,7 @@ class Game_CharacterBase
   attr_writer :real_x
   attr_writer :real_y
 
-  def shake(x_offset, y_offset, frames)
+  def shake(x_offset = 0.3, y_offset = 0.3, frames = 30)
     (frames / 6).times do
       @x += x_offset
       @y += y_offset
