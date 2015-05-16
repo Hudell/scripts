@@ -19,6 +19,12 @@ Or you can force a specific angle:
 
 $game_player.angle = 180
 
+You can also change the origin of the rotation, but be careful: When you do this, the character / event won't trigger events or collisions. They will start triggering them again if you set the origin back to 0. Those values are on pixels.
+
+$game_player.origin_x = 25
+
+$game_player.origin_y = 10
+
 Flashing
 --------
 Use this to flash the character for 10 frames:
