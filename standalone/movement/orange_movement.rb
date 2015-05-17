@@ -5,7 +5,7 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 1.9
+# Version: 1.9.1
 # You're free to use this script on any project
 #
 # Change Log:
@@ -147,6 +147,14 @@ module OrangeMovement
   #If it's set to an integer value, the script will look for an switch with that ID to determine if the script should be active or not
   Enabled = true
 
+  #Hitboxes are still being developed, they may not work properly
+  Enable_Hitbox = false
+
+  Player_Hitbox_X_Offset = 0
+  Player_Hitbox_Y_Offset = 0
+  Player_Hitbox_Width = 32
+  Player_Hitbox_Height = 48
+
   #------------------------------------------------------------
   #------------------------------------------------------------
   #---------------  DON'T EDIT AFTER THIS LINE  ---------------
@@ -154,6 +162,10 @@ module OrangeMovement
   #------------------------------------------------------------
 
   Step_Size = 1.0 / Tile_Sections
+  Hitbox_X_Size = Player_Hitbox_X_Offset / 32.0
+  Hitbox_Y_Size = Player_Hitbox_Y_Offset / 32.0
+  Hitbox_H_Size = Player_Hitbox_Width / 32.0
+  Hitbox_V_Size = Player_Hitbox_Height / 32.0
 
   def direction_goes_left?(direction)
     return [1, 4, 7].include?(direction)
@@ -286,14 +298,6 @@ unless OrangeMovement::Enabled == false
       end
     end
 
-    def x_tile_section
-      return (@x - @x.floor) / Step_Size
-    end
-
-    def y_tile_section
-      return (@y - @y.floor) / Step_Size
-    end
-
     def float_x
       @x
     end
@@ -394,102 +398,189 @@ unless OrangeMovement::Enabled == false
       end
     end  
 
-    def check_y_passability(d, y_section, tile_x, tile_y, y2_section, tile2_x, tile2_y, x_section, x2_section, check_x = false)
-      goes_up = direction_goes_up?(d)
-      goes_down = !goes_up && direction_goes_down?(d)
+    def can_go_up?(x, y, recursive = true)
+      the_x = x
+      the_y = y
 
-      if goes_up || goes_down
-        if direction_goes_up?(d)
-          if y_section == 0
-            return false unless $game_map.passable?(tile_x, tile_y, Direction.up)
-          end
-        elsif direction_goes_down?(d)
-          return false unless $game_map.passable?(tile_x, tile_y, Direction.down)
-          return false unless $game_map.passable?(tile_x, tile_y + 1, Direction.up)
+      if Enable_Hitbox
+        the_x += Hitbox_X_Size
+        the_y += Hitbox_Y_Size
+      end
 
-          if x_section > 0
-            return false unless $game_map.passable?(tile_x + 1, tile_y, Direction.down)
-            return false unless $game_map.passable?(tile_x + 1, tile_y + 1, Direction.up)
-          end
+      y_diff = the_y.floor - the_y
 
-          if y2_section > 0 && y2_section == (Tile_Sections - 1)
-            return false unless $game_map.passable?(tile2_x, tile2_y, Direction.down)
-          end
-        end
+      if y_diff < Step_Size
+        return false unless $game_map.passable?(the_x.floor, the_y.floor, Direction.up)
+      end
 
-        if check_x
-          if x_section > 0
-            #If you're between two horizontal tiles, you can't move up or down unless you can also move right
-            return false unless check_x_passability(6, x_section, tile_x, tile_y, x2_section, tile2_x, tile2_y, y_section, y2_section)
-          end
+      if recursive
+        if the_x > the_x.floor
+          return false unless can_go_right?(the_x, the_y, false)
         end
       end
 
       return true
     end
 
-    def check_x_passability(d, x_section, tile_x, tile_y, x2_section, tile2_x, tile2_y, y_section, y2_section, check_y = false)
-      goes_left = direction_goes_left?(d)
-      goes_right = !goes_left && direction_goes_right?(d)
+    def can_go_left?(x, y, recursive = true)
+      the_x = x
+      the_y = y
 
-      if goes_left || goes_right
-        if goes_left
-          if x_section == 0
-            return false unless $game_map.passable?(tile_x, tile_y, Direction.left)
-          end
-        elsif goes_right
-          return false unless $game_map.passable?(tile_x, tile_y, Direction.right)
-          return false unless $game_map.passable?(tile_x + 1, tile_y, Direction.left)
+      if Enable_Hitbox
+        the_x += Hitbox_X_Size
+        the_y += Hitbox_Y_Size
+      end
 
-          if x2_section > 0 && x2_section == (Tile_Sections - 1)
-            return false unless $game_map.passable?(tile2_x, tile2_y, Direction.right)
-          end
+      x_diff = the_x.floor - the_x
 
-          if y_section > 0
-            return false unless $game_map.passable?(tile_x, tile_y + 1, Direction.right)
-            return false unless $game_map.passable?(tile_x + 1, tile_y + 1, Direction.left)
+      if x_diff < Step_Size
+        return false unless $game_map.passable?(the_x.floor, the_y.floor, Direction.left)
+      end
 
-            if y_section == (Tile_Sections - 1)
-              return false unless $game_map.passable?(tile_x, tile_y, Direction.right)
+      if recursive
+        if the_y > the_y.floor
+          return false unless can_go_down?(x, y, false)
+        end
+      end
+      
+      return true
+    end
+
+    def can_go_down?(x, y, recursive = true)
+      if Enable_Hitbox
+
+        the_x = x + Hitbox_X_Size
+        the_y = y + Hitbox_Y_Size
+
+        end_x = the_x + Hitbox_H_Size
+        end_y = the_y + Hitbox_V_Size
+
+        new_y = the_y
+
+        while new_y.floor < end_y.floor
+          new_x = the_x
+
+          while new_x.floor < end_x.floor
+            return false unless $game_map.passable?(new_x.floor, new_y.floor, Direction.down)
+            return false unless $game_map.passable?(new_x.floor, new_y.floor + 1, Direction.down)
+
+            if new_x > new_x.floor
+              return false unless $game_map.passable?(new_x.floor + 1, new_y.floor, Direction.down)
+              return false unless $game_map.passable?(new_x.floor + 1, new_y.floor + 1, Direction.up)
+
+              # if new_y + Step_Size >= new_y.ceil
+              #   return false unless $game_map.passable?(new_x.floor, new_y.floor, Direction.right)
+              # end
             end
+
+            if new_y > new_y.floor && new_y + Step_Size >= new_y.ceil
+              return false unless $game_map.passable?(new_x.ceil, new_y.ceil, Direction.down)
+            end
+
+            new_x += 1
           end
+
+          new_y += 1
+        end
+      else
+        return false unless $game_map.passable?(x.floor, y.floor, Direction.down)
+        return false unless $game_map.passable?(x.floor, y.floor + 1, Direction.up)
+
+        if x > x.floor
+          return false unless $game_map.passable?(x.floor + 1, y.floor, Direction.down)
+          #I'm not sure if "y.floor + 1" is right, shouldn't it be y.ceil and only if that's different from y.floor?
+          return false unless $game_map.passable?(x.floor + 1, y.floor + 1, Direction.up)
         end
 
-        if check_y
-          if y_section > 0
-            #If you're between two vertical tiles, you can't move right or left unless you can also move down
-            return false unless check_y_passability(2, y_section, tile_x, tile_y, y2_section, tile2_x, tile2_y, x_section, x2_section)
-          end
+        if y > y.floor && y + Step_Size >= y.ceil
+          return false unless $game_map.passable?(x.ceil, y.ceil, Direction.down)
         end
       end
 
-      return true
+      if recursive
+        if x > x.floor
+          return false unless can_go_right?(x, y, false)
+        end
+      end
+
+      true
+    end
+
+    def can_go_right?(x, y, recursive = true)
+      if Enable_Hitbox
+        the_x = x + Hitbox_X_Size
+        the_y = y + Hitbox_Y_Size
+
+        end_x = the_x + Hitbox_H_Size
+        end_y = the_y + Hitbox_V_Size
+
+        new_y = the_y
+
+        while new_y.floor < end_y.floor
+          new_x = the_x
+
+          while new_x.floor < end_x.floor
+            return false unless $game_map.passable?(new_x.floor, new_y.floor, Direction.right)
+            return false unless $game_map.passable?(new_x.floor + 1, new_y.floor, Direction.left)
+
+            if new_x > new_x.floor && new_x + Step_Size >= new_x.ceil
+              return false unless $game_map.passable?(new_x.ceil, new_y.floor, Direction.right)
+            end
+
+            if new_y > new_y.floor
+              return false unless $game_map.passable?(new_x.floor, new_y.ceil, Direction.right)
+              return false unless $game_map.passable?(new_x.floor + 1, new_y.ceil, Direction.left)
+
+              if new_y + Step_Size >= new_y.ceil
+                return false unless $game_map.passable?(new_x.floor, new_y.floor, Direction.right)
+              end
+            end
+
+            new_x += 1
+          end
+
+          new_y += 1
+        end
+      else
+        return false unless $game_map.passable?(x.floor, y.floor, Direction.right)
+        return false unless $game_map.passable?(x.floor + 1, y.floor, Direction.left)
+
+        if x > x.floor && x + Step_Size >= x.ceil
+          return false unless $game_map.passable?(x.ceil, y.floor, Direction.right)
+        end
+
+        if y > y.floor
+          return false unless $game_map.passable?(x.floor, y.ceil, Direction.right)
+          #I'm not sure if "x.floor + 1" is right, shouldn't it be x.ceil and only if that's different from x.floor?
+          return false unless $game_map.passable?(x.floor + 1, y.ceil, Direction.left)
+
+          if y + Step_Size >= y.ceil
+            return false unless $game_map.passable?(x.floor, y.floor, Direction.right)
+          end
+        end        
+      end
+
+      if recursive
+        if y > y.floor
+          return false unless can_go_down?(x, y, false)
+        end
+      end
+
+      true
     end
 
     def module_map_passable?(x, y, d)
-      tile_x = x.floor
-      tile_y = y.floor
+      if direction_goes_up?(d)
+        return false unless can_go_up?(x, y)
+      elsif direction_goes_down?(d)
+        return false unless can_go_down?(x, y)
+      end
 
-      x2 = $game_map.player_x_with_direction(x, d)
-      y2 = $game_map.player_y_with_direction(y, d)
-
-      tile2_x = x2.floor
-      tile2_y = y2.floor
-
-      x_diff = x - tile_x
-      y_diff = y - tile_y
-
-      x2_diff = x2 - tile2_x
-      y2_diff = y2 - tile2_y
-
-      x_section = x_diff / Step_Size
-      y_section = y_diff / Step_Size
-
-      x2_section = x2_diff / Step_Size
-      y2_section = y2_diff / Step_Size
-
-      return false unless check_x_passability(d, x_section, tile_x, tile_y, x2_section, tile2_x, tile2_y, y_section, y2_section, true)
-      return false unless check_y_passability(d, y_section, tile_x, tile_y, y2_section, tile2_x, tile2_y, x_section, x2_section, true)
+      if direction_goes_left?(d)
+        return false unless can_go_left?(x, y)
+      elsif direction_goes_right?(d)
+        return false unless can_go_right?(x, y)
+      end
 
       return true
     end
