@@ -151,7 +151,6 @@ module OrangeMovement
   #If it's set to an integer value, the script will look for an switch with that ID to determine if the script should be active or not
   Enabled = true
 
-  #Hitboxes are still being developed, they may not work properly
   Enable_Hitbox = false
 
   Player_Hitbox_X_Offset = 0
