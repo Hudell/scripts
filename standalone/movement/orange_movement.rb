@@ -5,10 +5,14 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 1.9.2
+# Version: 2.0
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v2.0: 2015-05-17
+# => Completely remade the tileset collision check
+# => Implemented hitboxes for the player and follower
 #
 # v1.9: Improved followers movement
 #
@@ -52,7 +56,7 @@ module OrangeMovement
   Enable_Diagonal_Movement = true
 
   #Auto Avoid: If enabled, the player will automatically walk around small obstacles.
-  Auto_Avoid = false
+  Auto_Avoid = true
 
   #If this is set to false, the script won't try to avoid an obstacle by walking diagonally
   Auto_Avoid_Diagonally = true
@@ -85,7 +89,7 @@ module OrangeMovement
   # If set to false, the feature won't even be loaded on rpg maker, to avoid possible script conflicts.
   # If set to true, the feature will always be available
   # If set to an integer value, the script will look for a switch with that ID to decide if the feature is enabled or not
-  Auto_Jump = false
+  Auto_Jump = true
 
   #Auto_Jump_Only_When_Dashing
   #If this is set to true, the auto jump will only be available when the player is dashing
@@ -112,7 +116,7 @@ module OrangeMovement
   #The region of the jumpable obstacles
   #Set to true to jump over anything
   #Set to false to disable jumping over tiles
-  Auto_Jump_Region_Id = true
+  Auto_Jump_Region_Id = false
   
   #Auto_Jump_Region_Always_Passable
   #Set to an integer value to treat all tiles configured with that region as passable when jumping
@@ -133,11 +137,11 @@ module OrangeMovement
   # Set true to enable jumping over all events
   # Set false to disable jumping over all events
   # --not-implemented-yet--> Set it to a string value to create a filter on which events to jump (the script will look for the same string on the event's title)
-  Auto_Jump_Over_Events = true
+  Auto_Jump_Over_Events = false
 
   #Auto_Jump_Fall_Enabled
   #This let's you configure areas from where the player can fall, using regions.
-  Auto_Jump_Fall_Enabled = false
+  Auto_Jump_Fall_Enabled = true
   Auto_Jump_Fall_Down_Region = 2
   Auto_Jump_Fall_Left_Region = 4
   Auto_Jump_Fall_Right_Region = 6
@@ -148,7 +152,7 @@ module OrangeMovement
   Enabled = true
 
   #Hitboxes are still being developed, they may not work properly
-  Enable_Hitbox = true
+  Enable_Hitbox = false
 
   Player_Hitbox_X_Offset = 0
   Player_Hitbox_Y_Offset = 0
@@ -162,10 +166,17 @@ module OrangeMovement
   #------------------------------------------------------------
 
   Step_Size = 1.0 / Tile_Sections
-  Hitbox_X_Size = Player_Hitbox_X_Offset / 32.0
-  Hitbox_Y_Size = Player_Hitbox_Y_Offset / 32.0
-  Hitbox_H_Size = Player_Hitbox_Width / 32.0
-  Hitbox_V_Size = Player_Hitbox_Height / 32.0
+  if Enable_Hitbox
+    Hitbox_X_Size = Player_Hitbox_X_Offset / 32.0
+    Hitbox_Y_Size = Player_Hitbox_Y_Offset / 32.0
+    Hitbox_H_Size = Player_Hitbox_Width / 32.0
+    Hitbox_V_Size = Player_Hitbox_Height / 32.0
+  else
+    Hitbox_X_Size = 0
+    Hitbox_Y_Size = 0
+    Hitbox_H_Size = 1
+    Hitbox_V_Size = 1
+  end
 
   def direction_goes_left?(direction)
     return [1, 4, 7].include?(direction)
@@ -336,6 +347,20 @@ unless OrangeMovement::Enabled == false
       end
     end
 
+    # def first_x
+    #   (@x + Hitbox_X_Size).floor
+    # end
+    # def last_x
+    #   (@x + Hitbox_X_Size + Hitbox_V_Size - 0.01).floor
+    # end
+
+    # def first_y
+    #   (@y + Hitbox_Y_Size).floor
+    # end
+    # def last_y
+    #   (@y + Hitbox_Y_Size + Hitbox_H_Size - 0.01).floor
+    # end
+
     def x
       tile_x
     end
@@ -367,24 +392,39 @@ unless OrangeMovement::Enabled == false
     end
 
     def run_for_all_positions(x, y, &block)
-      tile_x = x.floor
-      tile_y = y.floor
+      if Enable_Hitbox
+        first_x = (x + Hitbox_X_Size).floor
+        last_x = (x + Hitbox_X_Size + Hitbox_H_Size - 0.01).floor
+        first_y = (y + Hitbox_Y_Size).floor
+        last_y = (y + Hitbox_Y_Size + Hitbox_V_Size - 0.01).floor
 
-      x_diff = x - tile_x
-      y_diff = y - tile_y
-
-      if x_diff == 0
-        if y_diff == 0
-          return block.call(tile_x, tile_y)
-        else
-          return block.call(tile_x, tile_y) || block.call(tile_x, tile_y + 1)
+        for new_x in first_x..last_x
+          for new_y in first_y..last_y
+            result = block.call(new_x, new_y)
+              
+            return true if result == true
+          end
         end
-      elsif y_diff == 0
-        return block.call(tile_x, tile_y) || block.call(tile_x + 1, tile_y)
+
+        return false
       else
-        return block.call(tile_x, tile_y) || block.call(tile_x + 1, tile_y) || block.call(tile_x, tile_y + 1) || block.call(tile_x + 1, tile_y + 1)
+        return true if block.call(x.floor, y.floor) == true
+
+        if x != x.floor
+          return true if block.call(x.ceil, y.floor) == true
+
+          if y != y.floor
+            return true if block.call(x.ceil, y.ceil) == true
+          end
+        end
+
+        if y != y.floor
+          return true if block.call(x.floor, y.ceil) == true
+        end
+
+        return false
       end
-    end
+    end    
 
     def collide_with_events?(x, y)
       run_for_all_positions(x, y) do |block_x, block_y|
@@ -403,28 +443,28 @@ unless OrangeMovement::Enabled == false
         the_x = x + Hitbox_X_Size
         the_y = y + Hitbox_Y_Size
 
-        end_x = the_x + Hitbox_H_Size
+        end_x = the_x + Hitbox_H_Size - 0.01
         destination_y = the_y - Step_Size
 
-        if the_y.floor != destination_y.floor
+        # if the_y.floor != destination_y.floor
           for new_x in the_x.floor..end_x.floor
             return false unless $game_map.passable?(new_x, the_y.floor, Direction.up)
             return false unless $game_map.passable?(new_x, destination_y.floor, Direction.down)
           end
-        end
+        # end
       else
-        y_diff = the_y.floor - the_y
+        y_diff = y.floor - y
 
         if y_diff < Step_Size
           return false unless $game_map.passable?(x.floor, y.floor, Direction.up)
         end        
-      end
 
-      # if recursive
-      #   if the_x > the_x.floor
-      #     return false unless can_go_right?(the_x, the_y, false)
-      #   end
-      # end
+        if recursive
+          if x > x.floor
+            return false unless can_go_right?(x, y, false)
+          end
+        end
+      end
 
       return true
     end
@@ -434,28 +474,29 @@ unless OrangeMovement::Enabled == false
         the_x = x + Hitbox_X_Size
         the_y = y + Hitbox_Y_Size
 
-        end_y = the_y + Hitbox_V_Size
+        end_y = the_y + Hitbox_V_Size - 0.01
         destination_x = the_x - Step_Size
 
-        if the_x.floor != destination_x.floor
+        # if the_x.floor != destination_x.floor
           for new_y in the_y.floor..end_y.floor
             return false unless $game_map.passable?(the_x.floor, new_y, Direction.left)
             return false unless $game_map.passable?(destination_x.floor, new_y, Direction.right)
           end
-        end
+        # end
       else
-        x_diff = the_x.floor - x
+        x_diff = x.floor - x
 
         if x_diff < Step_Size
-          return false unless $game_map.passable?(x.floor, the_y.floor, Direction.left)
+          return false unless $game_map.passable?(x.floor, y.floor, Direction.left)
+        end
+  
+        if recursive
+          if y > y.floor
+            return false unless can_go_down?(x, y, false)
+          end
         end
       end
 
-      # if recursive
-      #   if the_y > the_y.floor
-      #     return false unless can_go_down?(x, y, false)
-      #   end
-      # end
       
       return true
     end
@@ -465,37 +506,17 @@ unless OrangeMovement::Enabled == false
         the_x = x + Hitbox_X_Size
         the_y = y + Hitbox_Y_Size
 
-        end_x = the_x + Hitbox_H_Size
-        end_y = the_y + Hitbox_V_Size
+        end_x = the_x + Hitbox_H_Size - 0.01
+        end_y = the_y + Hitbox_V_Size - 0.01
         destination_y = the_y + Step_Size
         destination_end_y = end_y + Step_Size
 
-        if end_y.floor != destination_end_y.floor
+        # if end_y.floor != destination_end_y.floor
           for new_x in the_x.floor..end_x.floor
             return false unless $game_map.passable?(new_x, end_y.floor, Direction.down)
             return false unless $game_map.passable?(new_x, destination_end_y.floor, Direction.up)
           end
-        end
-
-        # the_x = x + Hitbox_X_Size
-        # the_y = y + Hitbox_Y_Size
-
-        # end_x = the_x + Hitbox_H_Size
-        # end_y = the_y + Hitbox_V_Size
-
-        # if end_y > end_y.floor && end_y + Step_Size >= end_y.ceil
-        #   for new_x in the_x.floor..end_x.floor
-        #     return false unless $game_map.passable?(new_x, end_y.floor, Direction.down)
-        #     # return false unless $game_map.passable?(new_x, end_y.floor + 1, Direction.up)
-        #   end
-        # # elsif Hitbox_V_Size >= 1.0
-        # #   for new_x in the_x.floor..end_x.floor
-        # #     return false unless $game_map.passable?(new_x, end_y.floor - 1, Direction.down)
-        # #     return false unless $game_map.passable?(new_x, end_y.floor, Direction.up)
-        # #   end
         # end
-
-
       else
         return false unless $game_map.passable?(x.floor, y.floor, Direction.down)
         return false unless $game_map.passable?(x.floor, y.floor + 1, Direction.up)
@@ -509,13 +530,13 @@ unless OrangeMovement::Enabled == false
         if y > y.floor && y + Step_Size >= y.ceil
           return false unless $game_map.passable?(x.ceil, y.ceil, Direction.down)
         end
+  
+        if recursive
+          if x > x.floor
+            return false unless can_go_right?(x, y, false)
+          end
+        end
       end
-
-      # if recursive
-      #   if x > x.floor
-      #     return false unless can_go_right?(x, y, false)
-      #   end
-      # end
 
       true
     end
@@ -525,34 +546,16 @@ unless OrangeMovement::Enabled == false
         the_x = x + Hitbox_X_Size
         the_y = y + Hitbox_Y_Size
 
-        end_x = the_x + Hitbox_H_Size
-        end_y = the_y + Hitbox_V_Size
+        end_x = the_x + Hitbox_H_Size - 0.01
+        end_y = the_y + Hitbox_V_Size - 0.01
         destination_x = the_x + Step_Size
         destination_end_x = end_x + Step_Size
 
-        if end_x.floor != destination_end_x.floor
+        # if end_x.floor != destination_end_x.floor
           for new_y in the_y.floor..end_y.floor
             return false unless $game_map.passable?(end_x.floor, new_y, Direction.right)
             return false unless $game_map.passable?(destination_end_x.floor, new_y, Direction.left)
           end
-        end
-
-        # the_x = x + Hitbox_X_Size
-        # the_y = y + Hitbox_Y_Size
-
-        # end_x = the_x + Hitbox_H_Size
-        # end_y = the_y + Hitbox_V_Size
-
-        # if end_x > end_x.floor && end_x + Step_Size >= end_x.ceil
-        #   for new_y in the_y.floor..end_y.floor
-        #     return false unless $game_map.passable?(end_x.floor, new_y, Direction.right)
-        #     return false unless $game_map.passable?(end_x.floor + 1, new_y, Direction.left)
-        #   end
-        # # elsif Hitbox_H_Size >= 1.0
-        # #   for new_y in the_y.floor..end_y.floor
-        # #     return false unless $game_map.passable?(end_x.floor - 1, new_y, Direction.right)
-        # #     return false unless $game_map.passable?(end_x, new_y, Direction.left)
-        # #   end
         # end
       else
         return false unless $game_map.passable?(x.floor, y.floor, Direction.right)
@@ -571,13 +574,13 @@ unless OrangeMovement::Enabled == false
             return false unless $game_map.passable?(x.floor, y.floor, Direction.right)
           end
         end        
+  
+        if recursive
+          if y > y.floor
+            return false unless can_go_down?(x, y, false)
+          end
+        end
       end
-
-      # if recursive
-      #   if y > y.floor
-      #     return false unless can_go_down?(x, y, false)
-      #   end
-      # end
 
       true
     end
@@ -628,7 +631,7 @@ unless OrangeMovement::Enabled == false
         set_direction(d)
         check_event_trigger_touch_front
       end
-    end
+    end    
 
     def module_move_diagonal(horz, vert)
       @move_succeed = diagonal_passable?(@x, @y, horz, vert)
@@ -732,25 +735,15 @@ unless OrangeMovement::Enabled == false
       return orange_movement_game_player_start_map_event(x, y, triggers, normal) unless enabled?
 
       run_for_all_positions(x, y) do |block_x, block_y|
+        print block_x.to_s + ", " + block_y.to_s + "\n"
         orange_movement_game_player_start_map_event(block_x, block_y, triggers, normal)
       end
-      if x != x.floor
-        start_map_event(x.ceil, y, triggers, normal)
-        
-        if y != y.floor
-          start_map_event(x.ceil, y.ceil, triggers, normal)
-        end
-      elsif y != y.floor
-        start_map_event(x, y.ceil, triggers, normal)
-      end
     end
-
 
     unless OrangeMovement::Auto_Jump == false && OrangeMovement::Auto_Avoid == false
       alias :orange_movement_game_player_move_by_input :move_by_input
       def move_by_input
         return orange_movement_game_player_move_by_input unless enabled?
-
         return if !movable? || $game_map.interpreter.running?
 
         button = :DOWN
@@ -1010,14 +1003,15 @@ unless OrangeMovement::Enabled == false
 
         if @jump_delay.nil? || @jump_delay == 0
           # jump over events
+
           if collide_with_characters?(destination_x, destination_y)
             if events_allow_jump?(destination_x, destination_y)
               if can_jump_over_event?(origin_x, origin_y, d)
                 jump_x *= 2
                 jump_y *= 2
 
-                destination_x = x + jump_x
-                destination_y = y + jump_y
+                destination_x = float_x + jump_x
+                destination_y = float_y + jump_y
 
                 unless collide_with_characters?(destination_x, destination_y)
                   do_jump(jump_x, jump_y)
@@ -1032,9 +1026,7 @@ unless OrangeMovement::Enabled == false
           #If it's jumping to the next tile
           if passable_any_direction?(destination_x, destination_y)
             if (Auto_Jump_Region_Id == true) || ($game_map.region_id(origin_x, origin_y) == Auto_Jump_Region_Id) || ($game_map.region_id(destination_x, destination_y) == Auto_Jump_Region_Id)
-              jumped = jump_if_clear(jump_x, jump_y)
-              p destination_x
-              p destination_y
+              jumped = jump_if_clear(jump_x, jump_y, d)
             end
           else
             #this "else" treats the case where the player is jumping over a whole tile, stopping two tiles away from it's original position
@@ -1053,7 +1045,7 @@ unless OrangeMovement::Enabled == false
               destination_y = origin_y + jump_y
               
               if passable_any_direction?(destination_x, destination_y)
-                jumped = jump_if_clear(jump_x, jump_y)
+                jumped = jump_if_clear(jump_x, jump_y, d)
               end
             end
           end
@@ -1064,45 +1056,55 @@ unless OrangeMovement::Enabled == false
 
         case d
           #when falling down, it should test the front tile instead, because on this case the "fallable" area is visible on screen
-        when Direction.down; return fall_down if $game_map.region_id(x, y + 1) == Auto_Jump_Fall_Down_Region
-        when Direction.left; return fall_left if $game_map.region_id(x, y) == Auto_Jump_Fall_Left_Region
-        when Direction.right; return fall_right if $game_map.region_id(x, y) == Auto_Jump_Fall_Right_Region
-        when Direction.up; return fall_up if $game_map.region_id(x, y) == Auto_Jump_Fall_Up_Region
+        when Direction.down; return fall_down if position_has_region?(x, y + 1, Auto_Jump_Fall_Down_Region)
+        when Direction.left; return fall_left if position_has_region?(float_x, y, Auto_Jump_Fall_Left_Region)
+        when Direction.right; return fall_right if position_has_region?(float_x, y, Auto_Jump_Fall_Right_Region)
+        when Direction.up; return fall_up if position_has_region?(x, y, Auto_Jump_Fall_Up_Region)
         end
 
         return false
+      end
+
+      def position_has_region?(x, y, region_id)
+        return true if $game_map.region_id(x.floor, y.floor) == region_id
+        return true if $game_map.region_id(x.floor, y.ceil) == region_id
+        return true if $game_map.region_id(x.ceil, y.ceil) == region_id
+        return true if $game_map.region_id(x.ceil, y.floor) == region_id
+        false
       end
 
       def fall_down
         fall_x = x
         fall_x2 = x
         jump_y = 1
-        fall_y = y + jump_y
+        fall_y = float_y + jump_y
 
         if x != float_x
           fall_x = float_x.floor
           fall_x2 = float_x.ceil
         end
 
-        return false unless $game_map.region_id(fall_x2, fall_y) == Auto_Jump_Fall_Down_Region
+        return false unless position_has_region?(fall_x2, fall_y, Auto_Jump_Fall_Down_Region)
 
         #While the region doesn't change, keep falling
-        while $game_map.region_id(fall_x, fall_y) == Auto_Jump_Fall_Down_Region && $game_map.region_id(fall_x2, fall_y) == Auto_Jump_Fall_Down_Region do
+        while position_has_region?(fall_x, fall_y, Auto_Jump_Fall_Down_Region) && position_has_region?(fall_x2, fall_y, Auto_Jump_Fall_Down_Region)
 
           #If it's an invalid tile, abort falling
-          return false if !$game_map.valid?(fall_x, fall_y)
-          return false if !$game_map.valid?(fall_x2, fall_y)
+          return false if !$game_map.valid?(fall_x, fall_y.floor)
+          return false if !$game_map.valid?(fall_x2, fall_y.floor)
+          return false if !$game_map.valid?(fall_x, fall_y.ceil)
+          return false if !$game_map.valid?(fall_x2, fall_y.ceil)
 
           jump_y += 1
           fall_y = y + jump_y
         end
 
-        return jump_if_clear(0, jump_y, true)
+        return jump_if_clear(0, jump_y, Direction.down, true)
       end
 
       def fall_left
         jump_x = -1
-        fall_x = x + jump_x
+        fall_x = float_x + jump_x
         fall_y = y
         fall_y2 = y
 
@@ -1114,21 +1116,23 @@ unless OrangeMovement::Enabled == false
         return false unless $game_map.region_id(x, fall_y2) == Auto_Jump_Fall_Left_Region
 
         #While the region doesn't change, keep falling
-        while $game_map.region_id(fall_x, fall_y) == Auto_Jump_Fall_Left_Region && $game_map.region_id(fall_x, fall_y2) == Auto_Jump_Fall_Left_Region do
+        while position_has_region?(fall_x, fall_y, Auto_Jump_Fall_Left_Region) && position_has_region?(fall_x, fall_y2, Auto_Jump_Fall_Left_Region)
           #If it's an invalid tile, abort falling
-          return false if !$game_map.valid?(fall_x, fall_y)
-          return false if !$game_map.valid?(fall_x, fall_y2)
+          return false if !$game_map.valid?(fall_x.floor, fall_y)
+          return false if !$game_map.valid?(fall_x.floor, fall_y2)
+          return false if !$game_map.valid?(fall_x.ceil, fall_y)
+          return false if !$game_map.valid?(fall_x.ceil, fall_y2)
 
           jump_x -= 1
           fall_x = x + jump_x
         end
 
-        return jump_if_clear(jump_x, 0, true)        
+        return jump_if_clear(jump_x, 0, Direction.left, true)        
       end
 
       def fall_right
         jump_x = 1
-        fall_x = x + jump_x
+        fall_x = float_x + jump_x
         fall_y = y
         fall_y2 = y
 
@@ -1137,36 +1141,38 @@ unless OrangeMovement::Enabled == false
           fall_y2 = float_y.ceil
         end
 
-        return false unless $game_map.region_id(x, fall_y2) == Auto_Jump_Fall_Right_Region
+        return false unless position_has_region?(float_x, fall_y2, Auto_Jump_Fall_Right_Region)
 
         #While the region doesn't change, keep falling
-        while $game_map.region_id(fall_x, fall_y) == Auto_Jump_Fall_Right_Region && $game_map.region_id(fall_x, fall_y2) == Auto_Jump_Fall_Right_Region do
+        while position_has_region?(fall_x, fall_y, Auto_Jump_Fall_Right_Region) && position_has_region?(fall_x, fall_y2, Auto_Jump_Fall_Right_Region)
           #If it's an invalid tile, abort falling
-          return false if !$game_map.valid?(fall_x, fall_y)
-          return false if !$game_map.valid?(fall_x, fall_y2)
+          return false if !$game_map.valid?(fall_x.floor, fall_y)
+          return false if !$game_map.valid?(fall_x.floor, fall_y2)
+          return false if !$game_map.valid?(fall_x.ceil, fall_y)
+          return false if !$game_map.valid?(fall_x.ceil, fall_y2)
 
           jump_x += 1
           fall_x = x + jump_x
         end
 
-        return jump_if_clear(jump_x, 0, true)        
+        return jump_if_clear(jump_x, 0, Direction.right, true)        
       end
 
       def fall_up
         fall_x = x
         fall_x2 = x
         jump_y = -1
-        fall_y = y + jump_y
+        fall_y = float_y + jump_y
 
         if x != float_x
           fall_x = float_x.floor
           fall_x2 = float_x.ceil
         end
 
-        return false unless $game_map.region_id(fall_x2, y) == Auto_Jump_Fall_Up_Region        
+        return false unless position_has_region?(fall_x2, float_y, Auto_Jump_Fall_Up_Region)
 
         #While the region doesn't change, keep falling
-        while $game_map.region_id(fall_x, fall_y) == Auto_Jump_Fall_Up_Region && $game_map.region_id(fall_x2, fall_y) == Auto_Jump_Fall_Up_Region do
+        while position_has_region?(fall_x, fall_y, Auto_Jump_Fall_Up_Region) && position_has_region?(fall_x2, fall_y, Auto_Jump_Fall_Up_Region)
           #If it's an invalid tile, abort falling
           return false if !$game_map.valid?(fall_x, fall_y)
           return false if !$game_map.valid?(fall_x2, fall_y)
@@ -1175,18 +1181,18 @@ unless OrangeMovement::Enabled == false
           fall_y = y + jump_y
         end
 
-        return jump_if_clear(0, jump_y, true)
+        return jump_if_clear(0, jump_y, Direction.up, true)
       end
 
-      def jump_if_clear(jump_x, jump_y, go_through = true)
+      def jump_if_clear(jump_x, jump_y, d, go_through = true)
         #If there's an event at the destination position, don't jump
-        if collide_with_characters?(tile_x + jump_x, tile_y + jump_y)
+        if collide_with_characters?(float_x + jump_x, float_y + jump_y)
           return false
         end
 
         #If it's jumping to the next tile only, then check for events on the origin tile too
         if (jump_x == 1 or jump_y == 1)
-          if collide_with_characters?(tile_x, tile_y)
+          if collide_with_characters?(float_x, float_y)
             return false
           end
         end
@@ -1212,7 +1218,6 @@ unless OrangeMovement::Enabled == false
         # return false if collide_with_characters?(x2, y2)
         return true   
       end
-
 
       def passable_any_direction?(x, y)
         return false if Auto_Jump_Region_Never_Passable == true
