@@ -5,10 +5,12 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 1.8
+# Version: 1.9
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v1.9: Improved followers movement
 #
 # v1.8: Added option to enable / disable the whole script using a switch, fixed a problem where followers wouldn't walk
 #
@@ -264,9 +266,8 @@ unless OrangeMovement::Enabled == false
     end
   end
 
-  class Game_Player < Game_Character
+  module Orange_Character
     include OrangeMovement
-
     def tile_x
       diff = @x - @x.floor
       if diff < 5
@@ -349,7 +350,6 @@ unless OrangeMovement::Enabled == false
       return false unless map_passable?(x2, y2, reverse_dir(d))
       return true
     end
-
 
     def passable?(x, y, d)
       return false unless tileset_passable?(x, y, d)
@@ -466,9 +466,7 @@ unless OrangeMovement::Enabled == false
       return true
     end
 
-    alias :hudell_orange_movement_game_player_map_passable? :map_passable?
-    def map_passable?(x, y, d)
-      return hudell_orange_movement_game_player_map_passable?(x, y, d) unless enabled?
+    def module_map_passable?(x, y, d)
       tile_x = x.floor
       tile_y = y.floor
 
@@ -511,6 +509,120 @@ unless OrangeMovement::Enabled == false
       return false
     end
 
+    def module_move_straight(d, turn_ok = true)
+      @move_succeed = passable?(@x, @y, d)
+      if @move_succeed
+        set_direction(d)
+        
+        @x = $game_map.round_player_x_with_direction(@x, d)
+        @y = $game_map.round_player_y_with_direction(@y, d)
+        @real_x = $game_map.player_x_with_direction(@x, reverse_dir(d))
+        @real_y = $game_map.player_y_with_direction(@y, reverse_dir(d))
+
+        increase_steps
+      elsif turn_ok
+        set_direction(d)
+        check_event_trigger_touch_front
+      end
+    end
+
+    def module_move_diagonal(horz, vert)
+      @move_succeed = diagonal_passable?(@x, @y, horz, vert)
+      if @move_succeed
+        @x = $game_map.round_player_x_with_direction(@x, horz)
+        @y = $game_map.round_player_y_with_direction(@y, vert)
+        @real_x = $game_map.player_x_with_direction(@x, reverse_dir(horz))
+        @real_y = $game_map.player_y_with_direction(@y, reverse_dir(vert))
+        increase_steps
+      end
+      set_direction(horz) if @direction == reverse_dir(horz)
+      set_direction(vert) if @direction == reverse_dir(vert)
+    end
+  end
+
+  class Game_Follower < Game_Character
+    include OrangeMovement
+    include Orange_Character
+
+    alias :hudell_orange_movement_game_follower_map_passable? :map_passable?
+    def map_passable?(x, y, d)
+      return hudell_orange_movement_game_follower_map_passable?(x, y, d) unless enabled?
+
+      return module_map_passable?(x, y, d)
+    end
+
+    alias :orange_movement_game_follower_move_straight :move_straight
+    def move_straight(d, turn_ok = true)
+      return orange_movement_game_follower_move_straight(d, turn_ok) unless enabled?
+      
+      module_move_straight(d, turn_ok)
+    end
+
+    alias :orange_movement_game_follower_move_diagonal :move_diagonal
+    def move_diagonal(horz, vert)
+      return orange_movement_game_follower_move_diagonal(horz, vert) unless enabled?
+      module_move_diagonal(horz, vert)
+    end
+
+    alias :orange_movement_game_follower_chase_preceding_character :chase_preceding_character
+    def chase_preceding_character
+      return orange_movement_game_follower_chase_preceding_character unless enabled?
+
+      unless moving?
+        ideal_x = @preceding_character.float_x
+        ideal_y = @preceding_character.float_y
+
+        case @preceding_character.direction
+        when 2
+          ideal_y -= 1
+        when 4
+          ideal_x += 1
+        when 6
+          ideal_x -= 1
+        when 8
+          ideal_y += 1
+        end
+
+        sx = distance_x_from(ideal_x)
+        sy = distance_y_from(ideal_y)
+        if sx.abs >= Step_Size && sy.abs >= Step_Size
+          move_diagonal(sx > 0 ? 4 : 6, sy > 0 ? 8 : 2)
+        elsif sx.abs >= Step_Size
+          move_straight(sx > 0 ? 4 : 6)
+        elsif sy.abs >= Step_Size
+          move_straight(sy > 0 ? 8 : 2)
+        end
+      end
+    end
+  end
+
+  class Game_Player < Game_Character
+    include OrangeMovement
+    include Orange_Character
+
+    alias :hudell_orange_movement_game_player_map_passable? :map_passable?
+    def map_passable?(x, y, d)
+      return hudell_orange_movement_game_player_map_passable?(x, y, d) unless enabled?
+
+      return module_map_passable?(x, y, d)
+    end
+
+    alias :orange_movement_game_player_move_straight :move_straight
+    def move_straight(d, turn_ok = true)
+      return orange_movement_game_player_move_straight(d, turn_ok) unless enabled?
+      
+      module_move_straight(d, turn_ok)
+      @followers.move if @move_succeed
+    end
+
+    alias :orange_movement_game_player_move_diagonal :move_diagonal
+    def move_diagonal(horz, vert)
+      return orange_movement_game_player_move_diagonal(horz, vert) unless enabled?
+      module_move_diagonal(horz, vert)
+
+      @followers.move if @move_succeed
+    end
+
     alias :orange_movement_game_player_start_map_event :start_map_event
     def start_map_event(x, y, triggers, normal)
       return orange_movement_game_player_start_map_event(x, y, triggers, normal) unless enabled?
@@ -529,43 +641,6 @@ unless OrangeMovement::Enabled == false
       end
     end
 
-    alias :orange_movement_game_player_move_straight :move_straight
-    def move_straight(d, turn_ok = true)
-      return orange_movement_game_player_move_straight(d, turn_ok) unless enabled?
-
-      @move_succeed = passable?(@x, @y, d)
-      if @move_succeed
-        @followers.move
-        set_direction(d)
-        
-        @x = $game_map.round_player_x_with_direction(@x, d)
-        @y = $game_map.round_player_y_with_direction(@y, d)
-        @real_x = $game_map.player_x_with_direction(@x, reverse_dir(d))
-        @real_y = $game_map.player_y_with_direction(@y, reverse_dir(d))
-
-        increase_steps
-      elsif turn_ok
-        set_direction(d)
-        check_event_trigger_touch_front
-      end
-    end
-
-    alias :orange_movement_game_player_move_diagonal :move_diagonal
-    def move_diagonal(horz, vert)
-      return orange_movement_game_player_move_diagonal(horz, vert) unless enabled?
-
-      @move_succeed = diagonal_passable?(@x, @y, horz, vert)
-      if @move_succeed
-        @followers.move
-        @x = $game_map.round_player_x_with_direction(@x, horz)
-        @y = $game_map.round_player_y_with_direction(@y, vert)
-        @real_x = $game_map.player_x_with_direction(@x, reverse_dir(horz))
-        @real_y = $game_map.player_y_with_direction(@y, reverse_dir(vert))
-        increase_steps
-      end
-      set_direction(horz) if @direction == reverse_dir(horz)
-      set_direction(vert) if @direction == reverse_dir(vert)
-    end
 
     unless OrangeMovement::Auto_Jump == false && OrangeMovement::Auto_Avoid == false
       alias :orange_movement_game_player_move_by_input :move_by_input
