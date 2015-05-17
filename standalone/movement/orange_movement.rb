@@ -5,7 +5,7 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 1.9.1
+# Version: 1.9.2
 # You're free to use this script on any project
 #
 # Change Log:
@@ -52,7 +52,7 @@ module OrangeMovement
   Enable_Diagonal_Movement = true
 
   #Auto Avoid: If enabled, the player will automatically walk around small obstacles.
-  Auto_Avoid = true
+  Auto_Avoid = false
 
   #If this is set to false, the script won't try to avoid an obstacle by walking diagonally
   Auto_Avoid_Diagonally = true
@@ -85,7 +85,7 @@ module OrangeMovement
   # If set to false, the feature won't even be loaded on rpg maker, to avoid possible script conflicts.
   # If set to true, the feature will always be available
   # If set to an integer value, the script will look for a switch with that ID to decide if the feature is enabled or not
-  Auto_Jump = true
+  Auto_Jump = false
 
   #Auto_Jump_Only_When_Dashing
   #If this is set to true, the auto jump will only be available when the player is dashing
@@ -148,12 +148,12 @@ module OrangeMovement
   Enabled = true
 
   #Hitboxes are still being developed, they may not work properly
-  Enable_Hitbox = false
+  Enable_Hitbox = true
 
   Player_Hitbox_X_Offset = 0
   Player_Hitbox_Y_Offset = 0
   Player_Hitbox_Width = 32
-  Player_Hitbox_Height = 48
+  Player_Hitbox_Height = 32
 
   #------------------------------------------------------------
   #------------------------------------------------------------
@@ -399,89 +399,103 @@ unless OrangeMovement::Enabled == false
     end  
 
     def can_go_up?(x, y, recursive = true)
-      the_x = x
-      the_y = y
-
       if Enable_Hitbox
-        the_x += Hitbox_X_Size
-        the_y += Hitbox_Y_Size
-      end
+        the_x = x + Hitbox_X_Size
+        the_y = y + Hitbox_Y_Size
 
-      y_diff = the_y.floor - the_y
+        end_x = the_x + Hitbox_H_Size
+        destination_y = the_y - Step_Size
 
-      if y_diff < Step_Size
-        return false unless $game_map.passable?(the_x.floor, the_y.floor, Direction.up)
-      end
-
-      if recursive
-        if the_x > the_x.floor
-          return false unless can_go_right?(the_x, the_y, false)
+        if the_y.floor != destination_y.floor
+          for new_x in the_x.floor..end_x.floor
+            return false unless $game_map.passable?(new_x, the_y.floor, Direction.up)
+            return false unless $game_map.passable?(new_x, destination_y.floor, Direction.down)
+          end
         end
+      else
+        y_diff = the_y.floor - the_y
+
+        if y_diff < Step_Size
+          return false unless $game_map.passable?(x.floor, y.floor, Direction.up)
+        end        
       end
+
+      # if recursive
+      #   if the_x > the_x.floor
+      #     return false unless can_go_right?(the_x, the_y, false)
+      #   end
+      # end
 
       return true
     end
 
     def can_go_left?(x, y, recursive = true)
-      the_x = x
-      the_y = y
-
       if Enable_Hitbox
-        the_x += Hitbox_X_Size
-        the_y += Hitbox_Y_Size
-      end
+        the_x = x + Hitbox_X_Size
+        the_y = y + Hitbox_Y_Size
 
-      x_diff = the_x.floor - the_x
+        end_y = the_y + Hitbox_V_Size
+        destination_x = the_x - Step_Size
 
-      if x_diff < Step_Size
-        return false unless $game_map.passable?(the_x.floor, the_y.floor, Direction.left)
-      end
+        if the_x.floor != destination_x.floor
+          for new_y in the_y.floor..end_y.floor
+            return false unless $game_map.passable?(the_x.floor, new_y, Direction.left)
+            return false unless $game_map.passable?(destination_x.floor, new_y, Direction.right)
+          end
+        end
+      else
+        x_diff = the_x.floor - x
 
-      if recursive
-        if the_y > the_y.floor
-          return false unless can_go_down?(x, y, false)
+        if x_diff < Step_Size
+          return false unless $game_map.passable?(x.floor, the_y.floor, Direction.left)
         end
       end
+
+      # if recursive
+      #   if the_y > the_y.floor
+      #     return false unless can_go_down?(x, y, false)
+      #   end
+      # end
       
       return true
     end
 
     def can_go_down?(x, y, recursive = true)
       if Enable_Hitbox
-
         the_x = x + Hitbox_X_Size
         the_y = y + Hitbox_Y_Size
 
         end_x = the_x + Hitbox_H_Size
         end_y = the_y + Hitbox_V_Size
+        destination_y = the_y + Step_Size
+        destination_end_y = end_y + Step_Size
 
-        new_y = the_y
-
-        while new_y.floor < end_y.floor
-          new_x = the_x
-
-          while new_x.floor < end_x.floor
-            return false unless $game_map.passable?(new_x.floor, new_y.floor, Direction.down)
-            return false unless $game_map.passable?(new_x.floor, new_y.floor + 1, Direction.down)
-
-            if new_x > new_x.floor
-              return false unless $game_map.passable?(new_x.floor + 1, new_y.floor, Direction.down)
-              return false unless $game_map.passable?(new_x.floor + 1, new_y.floor + 1, Direction.up)
-
-              # if new_y + Step_Size >= new_y.ceil
-              #   return false unless $game_map.passable?(new_x.floor, new_y.floor, Direction.right)
-              # end
-            end
-
-            if new_y > new_y.floor && new_y + Step_Size >= new_y.ceil
-              return false unless $game_map.passable?(new_x.ceil, new_y.ceil, Direction.down)
-            end
-
-            new_x += 1
+        if end_y.floor != destination_end_y.floor
+          for new_x in the_x.floor..end_x.floor
+            return false unless $game_map.passable?(new_x, end_y.floor, Direction.down)
+            return false unless $game_map.passable?(new_x, destination_end_y.floor, Direction.up)
           end
-
-          new_y += 1
         end
+
+        # the_x = x + Hitbox_X_Size
+        # the_y = y + Hitbox_Y_Size
+
+        # end_x = the_x + Hitbox_H_Size
+        # end_y = the_y + Hitbox_V_Size
+
+        # if end_y > end_y.floor && end_y + Step_Size >= end_y.ceil
+        #   for new_x in the_x.floor..end_x.floor
+        #     return false unless $game_map.passable?(new_x, end_y.floor, Direction.down)
+        #     # return false unless $game_map.passable?(new_x, end_y.floor + 1, Direction.up)
+        #   end
+        # # elsif Hitbox_V_Size >= 1.0
+        # #   for new_x in the_x.floor..end_x.floor
+        # #     return false unless $game_map.passable?(new_x, end_y.floor - 1, Direction.down)
+        # #     return false unless $game_map.passable?(new_x, end_y.floor, Direction.up)
+        # #   end
+        # end
+
+
       else
         return false unless $game_map.passable?(x.floor, y.floor, Direction.down)
         return false unless $game_map.passable?(x.floor, y.floor + 1, Direction.up)
@@ -497,11 +511,11 @@ unless OrangeMovement::Enabled == false
         end
       end
 
-      if recursive
-        if x > x.floor
-          return false unless can_go_right?(x, y, false)
-        end
-      end
+      # if recursive
+      #   if x > x.floor
+      #     return false unless can_go_right?(x, y, false)
+      #   end
+      # end
 
       true
     end
@@ -513,34 +527,33 @@ unless OrangeMovement::Enabled == false
 
         end_x = the_x + Hitbox_H_Size
         end_y = the_y + Hitbox_V_Size
+        destination_x = the_x + Step_Size
+        destination_end_x = end_x + Step_Size
 
-        new_y = the_y
-
-        while new_y.floor < end_y.floor
-          new_x = the_x
-
-          while new_x.floor < end_x.floor
-            return false unless $game_map.passable?(new_x.floor, new_y.floor, Direction.right)
-            return false unless $game_map.passable?(new_x.floor + 1, new_y.floor, Direction.left)
-
-            if new_x > new_x.floor && new_x + Step_Size >= new_x.ceil
-              return false unless $game_map.passable?(new_x.ceil, new_y.floor, Direction.right)
-            end
-
-            if new_y > new_y.floor
-              return false unless $game_map.passable?(new_x.floor, new_y.ceil, Direction.right)
-              return false unless $game_map.passable?(new_x.floor + 1, new_y.ceil, Direction.left)
-
-              if new_y + Step_Size >= new_y.ceil
-                return false unless $game_map.passable?(new_x.floor, new_y.floor, Direction.right)
-              end
-            end
-
-            new_x += 1
+        if end_x.floor != destination_end_x.floor
+          for new_y in the_y.floor..end_y.floor
+            return false unless $game_map.passable?(end_x.floor, new_y, Direction.right)
+            return false unless $game_map.passable?(destination_end_x.floor, new_y, Direction.left)
           end
-
-          new_y += 1
         end
+
+        # the_x = x + Hitbox_X_Size
+        # the_y = y + Hitbox_Y_Size
+
+        # end_x = the_x + Hitbox_H_Size
+        # end_y = the_y + Hitbox_V_Size
+
+        # if end_x > end_x.floor && end_x + Step_Size >= end_x.ceil
+        #   for new_y in the_y.floor..end_y.floor
+        #     return false unless $game_map.passable?(end_x.floor, new_y, Direction.right)
+        #     return false unless $game_map.passable?(end_x.floor + 1, new_y, Direction.left)
+        #   end
+        # # elsif Hitbox_H_Size >= 1.0
+        # #   for new_y in the_y.floor..end_y.floor
+        # #     return false unless $game_map.passable?(end_x.floor - 1, new_y, Direction.right)
+        # #     return false unless $game_map.passable?(end_x, new_y, Direction.left)
+        # #   end
+        # end
       else
         return false unless $game_map.passable?(x.floor, y.floor, Direction.right)
         return false unless $game_map.passable?(x.floor + 1, y.floor, Direction.left)
@@ -560,11 +573,11 @@ unless OrangeMovement::Enabled == false
         end        
       end
 
-      if recursive
-        if y > y.floor
-          return false unless can_go_down?(x, y, false)
-        end
-      end
+      # if recursive
+      #   if y > y.floor
+      #     return false unless can_go_down?(x, y, false)
+      #   end
+      # end
 
       true
     end
