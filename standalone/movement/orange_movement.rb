@@ -137,7 +137,7 @@ module OrangeMovement
   # Set true to enable jumping over all events
   # Set false to disable jumping over all events
   # --not-implemented-yet--> Set it to a string value to create a filter on which events to jump (the script will look for the same string on the event's title)
-  Auto_Jump_Over_Events = false
+  Auto_Jump_Over_Events = true
 
   #Auto_Jump_Fall_Enabled
   #This let's you configure areas from where the player can fall, using regions.
@@ -158,6 +158,10 @@ module OrangeMovement
   Player_Hitbox_Y_Offset = 0
   Player_Hitbox_Width = 32
   Player_Hitbox_Height = 32
+
+  # Set this to true to trigger all available events everytime. For example: If the player steps on two different events with "on touch" trigger, both will be triggered if this is true
+  # If this is false, only one of them will be triggered
+  Trigger_All_Events = false
 
   #------------------------------------------------------------
   #------------------------------------------------------------
@@ -735,7 +739,10 @@ unless OrangeMovement::Enabled == false
       return orange_movement_game_player_start_map_event(x, y, triggers, normal) unless enabled?
 
       run_for_all_positions(x, y) do |block_x, block_y|
-        print block_x.to_s + ", " + block_y.to_s + "\n"
+        unless Trigger_All_Events
+          return if $game_map.any_event_starting?
+        end
+
         orange_movement_game_player_start_map_event(block_x, block_y, triggers, normal)
       end
     end
