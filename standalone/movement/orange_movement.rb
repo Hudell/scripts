@@ -5,7 +5,7 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 2.0
+# Version: 2.0.1
 # You're free to use this script on any project
 #
 # Change Log:
@@ -350,20 +350,6 @@ unless OrangeMovement::Enabled == false
       end
     end
 
-    # def first_x
-    #   (@x + Hitbox_X_Size).floor
-    # end
-    # def last_x
-    #   (@x + Hitbox_X_Size + Hitbox_V_Size - 0.01).floor
-    # end
-
-    # def first_y
-    #   (@y + Hitbox_Y_Size).floor
-    # end
-    # def last_y
-    #   (@y + Hitbox_Y_Size + Hitbox_H_Size - 0.01).floor
-    # end
-
     def x
       tile_x
     end
@@ -449,12 +435,12 @@ unless OrangeMovement::Enabled == false
         end_x = the_x + Hitbox_H_Size - 0.01
         destination_y = the_y - Step_Size
 
-        # if the_y.floor != destination_y.floor
+        if the_y.floor != destination_y.floor
           for new_x in the_x.floor..end_x.floor
             return false unless $game_map.passable?(new_x, the_y.floor, Direction.up)
             return false unless $game_map.passable?(new_x, destination_y.floor, Direction.down)
           end
-        # end
+        end
       else
         y_diff = y.floor - y
 
@@ -480,12 +466,12 @@ unless OrangeMovement::Enabled == false
         end_y = the_y + Hitbox_V_Size - 0.01
         destination_x = the_x - Step_Size
 
-        # if the_x.floor != destination_x.floor
+        if the_x.floor != destination_x.floor
           for new_y in the_y.floor..end_y.floor
             return false unless $game_map.passable?(the_x.floor, new_y, Direction.left)
             return false unless $game_map.passable?(destination_x.floor, new_y, Direction.right)
           end
-        # end
+        end
       else
         x_diff = x.floor - x
 
@@ -514,12 +500,12 @@ unless OrangeMovement::Enabled == false
         destination_y = the_y + Step_Size
         destination_end_y = end_y + Step_Size
 
-        # if end_y.floor != destination_end_y.floor
+        if end_y.floor != destination_end_y.floor
           for new_x in the_x.floor..end_x.floor
             return false unless $game_map.passable?(new_x, end_y.floor, Direction.down)
             return false unless $game_map.passable?(new_x, destination_end_y.floor, Direction.up)
           end
-        # end
+        end
       else
         return false unless $game_map.passable?(x.floor, y.floor, Direction.down)
         return false unless $game_map.passable?(x.floor, y.floor + 1, Direction.up)
@@ -554,12 +540,12 @@ unless OrangeMovement::Enabled == false
         destination_x = the_x + Step_Size
         destination_end_x = end_x + Step_Size
 
-        # if end_x.floor != destination_end_x.floor
+        if end_x.floor != destination_end_x.floor
           for new_y in the_y.floor..end_y.floor
             return false unless $game_map.passable?(end_x.floor, new_y, Direction.right)
             return false unless $game_map.passable?(destination_end_x.floor, new_y, Direction.left)
           end
-        # end
+        end
       else
         return false unless $game_map.passable?(x.floor, y.floor, Direction.right)
         return false unless $game_map.passable?(x.floor + 1, y.floor, Direction.left)
