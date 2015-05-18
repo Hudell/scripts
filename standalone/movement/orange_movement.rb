@@ -24,7 +24,7 @@
 #
 # v1.5: Added a new setting to disable diagonal movement
 #
-# v1.4: Fixed a problem with the Auto_Fall feature when used together will pixel movement
+# v1.4: Fixed a problem with the Auto_Fall feature when used together with pixel movement
 #
 # v1.3: Fixed a problem where sometimes the player would be able to enter an impassable tile
 #
