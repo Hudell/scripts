@@ -5,10 +5,13 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 2.0.1
+# Version: 2.1
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v2.1: 2015-05-20
+# => Added a new setting: Block_Repeated_Event_Triggering
 #
 # v2.0: 2015-05-17
 # => Completely remade the tileset collision check
@@ -161,6 +164,12 @@ module OrangeMovement
   # Set this to true to trigger all available events everytime. For example: If the player steps on two different events with "on touch" trigger, both will be triggered if this is true
   # If this is false, only one of them will be triggered
   Trigger_All_Events = false
+
+  # If set to true, an event will only be triggered for a second time if you leave the tile it is on and step on the tile again. If you just move into the tile, it won't be triggered.
+  # If set to false, the event will be triggered again after each step
+  # Setting this to true may break compatibility with other scripts (it's not compatible with Effectus, for example)
+  # Check the additional scripts here for compatibility fixes: https://github.com/Hudell/scripts/tree/master/standalone/movement/compatibility
+  Block_Repeated_Event_Triggering = true
 
   #------------------------------------------------------------
   #------------------------------------------------------------
@@ -722,14 +731,62 @@ unless OrangeMovement::Enabled == false
     alias :orange_movement_game_player_start_map_event :start_map_event
     def start_map_event(x, y, triggers, normal)
       return orange_movement_game_player_start_map_event(x, y, triggers, normal) unless enabled?
+      return if $game_map.interpreter.running?
 
       run_for_all_positions(x, y) do |block_x, block_y|
         unless Trigger_All_Events
           return if $game_map.any_event_starting?
         end
 
-        orange_movement_game_player_start_map_event(block_x, block_y, triggers, normal)
+        if Block_Repeated_Event_Triggering == true
+          do_actual_start_map_event(block_x, block_y, triggers, normal)
+        else
+          orange_movement_game_player_start_map_event(block_x, block_y, triggers, normal)
+        end
       end
+    end
+
+    def do_actual_start_map_event(block_x, block_y, triggers, normal)
+      return if is_tile_checked?(block_x, block_y)
+
+      $game_map.events_xy(block_x, block_y).each do |event|
+        if event.trigger_in?(triggers) && event.normal_priority? == normal
+          mark_tile_as_checked(event.x, event.y)
+          event.start
+        end
+      end
+    end
+
+    def is_tile_checked?(block_x, block_y)
+      return false if @checked_tiles.nil?
+
+      @checked_tiles.each do |tile|
+        next if tile[:x] != block_x
+        next if tile[:y] != block_y
+
+        return true
+      end
+
+      return false
+    end
+
+    def mark_tile_as_checked(x, y)
+      @checked_tiles = [] if @checked_tiles.nil?
+      @checked_tiles << {:x => x, :y => y}
+    end
+
+    def clear_checked_tiles
+      return if @checked_tiles.nil?
+      new_list = []
+
+      @checked_tiles.each do |tile|
+        next if tile[:x] != $game_player.float_x.floor && tile[:x] != $game_player.float_x.ceil
+        next if tile[:y] != $game_player.float_y.floor && tile[:y] != $game_player.float_y.ceil
+
+        new_list << tile
+      end
+
+      @checked_tiles = new_list
     end
 
     unless OrangeMovement::Auto_Jump == false && OrangeMovement::Auto_Avoid == false
@@ -747,6 +804,8 @@ unless OrangeMovement::Enabled == false
           when 6; button = :RIGHT
           when 8; button = :UP
         end
+
+        clear_checked_tiles
 
         if passable?(@x, @y, d)
           unless OrangeMovement::Enable_Diagonal_Movement == false
@@ -1229,6 +1288,19 @@ unless OrangeMovement::Enabled == false
 
         return false
       end
+    end
+  end
+end
+
+if OrangeMovement::Block_Repeated_Event_Triggering == true
+  class Game_Interpreter
+    alias :hudell_orange_movement_game_interpreter_command_201 :command_201
+    def command_201
+      hudell_orange_movement_game_interpreter_command_201
+      return if $game_party.in_battle
+
+      $game_player.clear_checked_tiles
+      $game_player.mark_tile_as_checked($game_player.x, $game_player.y)
     end
   end
 end
