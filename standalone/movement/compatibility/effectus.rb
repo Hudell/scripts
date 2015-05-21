@@ -5,7 +5,7 @@ class Game_Player < Game_Character
 
     $game_map.ms_effectus_event_pos[y * $game_map.width + x].each do |event|
       if event.trigger_in?(triggers) && event.normal_priority? == normal
-        mark_tile_as_checked(event.x, event.y)
+        mark_tile_as_checked(event.x, event.y) if event.trigger == 1 || event.trigger == 2
         event.start
       end
     end
