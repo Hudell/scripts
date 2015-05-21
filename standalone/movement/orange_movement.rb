@@ -5,7 +5,7 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 2.1
+# Version: 2.1.1
 # You're free to use this script on any project
 #
 # Change Log:
@@ -751,7 +751,7 @@ unless OrangeMovement::Enabled == false
 
       $game_map.events_xy(block_x, block_y).each do |event|
         if event.trigger_in?(triggers) && event.normal_priority? == normal
-          mark_tile_as_checked(event.x, event.y)
+          mark_tile_as_checked(event.x, event.y) if event.trigger == 1 || event.trigger == 2
           event.start
         end
       end
