@@ -5,10 +5,13 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 2.1.1
+# Version: 2.2
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v2.2: 2015-05-24
+# => Fixed a problem where events could sometimes walk over the player
 #
 # v2.1: 2015-05-20
 # => Added a new setting: Block_Repeated_Event_Triggering
@@ -366,6 +369,14 @@ unless OrangeMovement::Enabled == false
     def y
       tile_y
     end
+
+    def pos?(x, y)
+      if @x.floor == x || @x.ceil == x
+        return true if @y.floor == y || @y.ceil == y
+      end
+
+      false
+    end    
 
     def tileset_passable?(x, y, d)
       x2 = $game_map.round_player_x_with_direction(x, d)
