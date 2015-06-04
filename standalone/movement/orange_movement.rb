@@ -5,7 +5,7 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 2.2
+# Version: 2.2.1
 # You're free to use this script on any project
 #
 # Change Log:
