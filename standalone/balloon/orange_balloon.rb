@@ -16,12 +16,20 @@ module OrangeBalloon
   BULB = 9
   ZZZ = 10
 
+  def self.get_event(event_id)
+    if event_id > 0
+      event = $game_map.events[event_id]
+    else
+      event = $game_map.interpreter.get_character(event_id)
+    end
+  end
+
   def self.show_balloon(balloon_id)
     show_balloon_at_event(0, balloon_id)
   end
 
   def self.show_balloon_at_event(event_id, balloon_id, keep_showing = true)
-    event = $game_map.interpreter.get_character(event_id)
+    event = get_event(event_id)
     return if event.nil?
     if keep_showing
       event.loop_balloon = true
@@ -30,7 +38,7 @@ module OrangeBalloon
   end
 
   def self.hide_balloon(event_id = 0)
-    event = $game_map.interpreter.get_character(event_id)
+    event = get_event(event_id)
     return if event.nil?
     event.loop_balloon = false
     event.halt_balloon = true
