@@ -386,6 +386,7 @@ unless OrangeMovement::Enabled == false
       return true if @through || debug_through?
       return false unless map_passable?(x, y, d)
       return false unless map_passable?(x2, y2, reverse_dir(d))
+
       return true
     end
 
@@ -460,6 +461,10 @@ unless OrangeMovement::Enabled == false
             return false unless $game_map.passable?(new_x, the_y.floor, Direction.up)
             return false unless $game_map.passable?(new_x, destination_y.floor, Direction.down)
           end
+        else
+          for new_x in the_x.floor..end_x.floor
+            return false unless $game_map.passable?(new_x, the_y.floor, Direction.up) || $game_map.passable?(new_x, the_y.floor, Direction.down)
+          end
         end
       else
         y_diff = y.floor - y
@@ -491,6 +496,10 @@ unless OrangeMovement::Enabled == false
             return false unless $game_map.passable?(the_x.floor, new_y, Direction.left)
             return false unless $game_map.passable?(destination_x.floor, new_y, Direction.right)
           end
+        else
+          for new_y in the_y.floor..end_y.floor
+            return false unless $game_map.passable?(the_x.floor, new_y, Direction.left) || $game_map.passable?(the_x.floor, new_y, Direction.right)
+          end          
         end
       else
         x_diff = x.floor - x
@@ -1091,8 +1100,7 @@ unless OrangeMovement::Enabled == false
               jumped = jump_if_clear(jump_x, jump_y, d)
             end
           else
-            #this "else" treats the case where the player is jumping over a whole tile, stopping two tiles away from it's original position
-            
+            #this "else" treats the case where the player is jumping over a whole tile, stopping two tiles away from it's original position            
             if collide_with_characters?(destination_x, destination_y)
               return
             end
