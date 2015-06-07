@@ -5,10 +5,13 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 2.2.1
+# Version: 2.3
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v2.3: 2015-06-04
+# => Added settings to configure passable and unpassable tiles using regions
 #
 # v2.2: 2015-05-24
 # => Fixed a problem where events could sometimes walk over the player
@@ -164,6 +167,10 @@ module OrangeMovement
   Player_Hitbox_Width = 32
   Player_Hitbox_Height = 32
 
+  #If those are set to an integer value, all tiles configured with that region will be always or never passable
+  Map_Always_Passable_Region = false
+  Map_Never_Passable_Region = false
+
   # Set this to true to trigger all available events everytime. For example: If the player steps on two different events with "on touch" trigger, both will be triggered if this is true
   # If this is false, only one of them will be triggered
   Trigger_All_Events = false
@@ -301,6 +308,22 @@ unless OrangeMovement::Enabled == false
 
     def round_player_y_with_direction(y, d)
       round_y(player_y_with_direction(y, d))
+    end
+
+    alias :hudell_orange_movement_check_passage :check_passage
+    def check_passage(x, y, bit)
+      if OrangeMovement::Map_Never_Passable_Region != false || OrangeMovement::Map_Always_Passable_Region != false
+        region = $game_map.region_id(x, y)
+
+        if OrangeMovement::Map_Always_Passable_Region != false
+          return true if region == OrangeMovement::Map_Always_Passable_Region
+        end
+        if OrangeMovement::Map_Never_Passable_Region != false
+          return false if region == OrangeMovement::Map_Never_Passable_Region
+        end
+      end
+
+      return hudell_orange_movement_check_passage(x, y, bit)
     end
   end
 
