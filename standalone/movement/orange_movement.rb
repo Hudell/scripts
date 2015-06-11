@@ -4,11 +4,14 @@
 #------------------------------------------------------------
 #------------------------------------------------------------
 #
-# Script created by Hudell
-# Version: 2.3
+# Script created by Hudell (www.hudell.com)
+# Version: 2.4.1
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v2.4: 2015-06-10
+# => Added a new option to ignore empty events when choosing what event to trigger
 #
 # v2.3: 2015-06-04
 # => Added settings to configure passable and unpassable tiles using regions
@@ -44,6 +47,16 @@
 #
 
 module OrangeMovement
+  #------------------------------------------------------------
+  #------------------------------------------------------------
+  #---------------------  COMPATIBILITY  ----------------------
+  #------------------------------------------------------------
+  #------------------------------------------------------------
+  #
+  # Don't forget to check the compatibility patches and notes at:
+  # https://github.com/Hudell/scripts/tree/master/standalone/movement/compatibility
+  #
+  #
   #------------------------------------------------------------
   #------------------------------------------------------------
   #---------------------  CONFIGURATION  ----------------------
@@ -175,10 +188,11 @@ module OrangeMovement
   # If this is false, only one of them will be triggered
   Trigger_All_Events = false
 
+  # If this is true, events without any command won't be triggered 
+  Ignore_Empty_Events = true
+
   # If set to true, an event will only be triggered for a second time if you leave the tile it is on and step on the tile again. If you just move into the tile, it won't be triggered.
   # If set to false, the event will be triggered again after each step
-  # Setting this to true may break compatibility with other scripts (it's not compatible with Effectus, for example)
-  # Check the additional scripts here for compatibility fixes: https://github.com/Hudell/scripts/tree/master/standalone/movement/compatibility
   Block_Repeated_Event_Triggering = true
 
   #------------------------------------------------------------
@@ -781,19 +795,37 @@ unless OrangeMovement::Enabled == false
           return if $game_map.any_event_starting?
         end
 
-        if Block_Repeated_Event_Triggering == true
+        #If any of those two settings is enabled, then we have to use the custom "start_map_event"
+        if Block_Repeated_Event_Triggering == true || OrangeMovement::Ignore_Empty_Events == true
           do_actual_start_map_event(block_x, block_y, triggers, normal)
         else
+          #If they are both disabled, then run the standard "start_map_event" to keep compatibility with scripts that use it
           orange_movement_game_player_start_map_event(block_x, block_y, triggers, normal)
         end
       end
+    end
+
+    def event_has_anything_to_run?(event)
+      return true unless OrangeMovement::Ignore_Empty_Events == true
+
+      event.list.each do |command|
+        next if command.code == 108 || command.code == 408 #comments
+        next if command.code == 118 #Label
+        next if command.code == 0 #End of list
+
+        return true
+      end
+
+      return false
     end
 
     def do_actual_start_map_event(block_x, block_y, triggers, normal)
       return if is_tile_checked?(block_x, block_y)
 
       $game_map.events_xy(block_x, block_y).each do |event|
-        if event.trigger_in?(triggers) && event.normal_priority? == normal
+        next if event.erased
+
+        if event.trigger_in?(triggers) && event.normal_priority? == normal && event_has_anything_to_run?(event)
           mark_tile_as_checked(event.x, event.y) if event.trigger == 1 || event.trigger == 2
           event.start
         end
