@@ -5,13 +5,14 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 2.4.1
+# Version: 2.4.2
 # You're free to use this script on any project
 #
 # Change Log:
 #
-# v2.4: 2015-06-10
+# v2.4: 2015-06-11
 # => Added a new option to ignore empty events when choosing what event to trigger
+# => If somehow the player is on the same tile as an unpassable event, they will now be able to leave that tile
 #
 # v2.3: 2015-06-04
 # => Added settings to configure passable and unpassable tiles using regions
@@ -471,11 +472,24 @@ unless OrangeMovement::Enabled == false
 
         return false
       end
-    end    
+    end
 
     def collide_with_events?(x, y)
       run_for_all_positions(x, y) do |block_x, block_y|
-        super(block_x, block_y)
+
+        if self == $game_player
+          $game_map.events_xy_nt(block_x, block_y).any? do |event|
+            #If the player is "inside" it, then this event won't be considered,
+            #because if it did, the player would be locked on it
+            if $game_player.is_touching_tile?(block_x, block_y)
+              false
+            else
+              event.normal_priority?
+            end
+          end
+        else
+          super(block_x, block_y)
+        end
       end
     end
 
@@ -803,6 +817,23 @@ unless OrangeMovement::Enabled == false
           orange_movement_game_player_start_map_event(block_x, block_y, triggers, normal)
         end
       end
+    end
+
+    def position_data
+      the_x = @x + OrangeMovement::Hitbox_X_Size
+      the_y = @y + OrangeMovement::Hitbox_Y_Size
+      width = OrangeMovement::Hitbox_H_Size.to_f - 0.01
+      height = OrangeMovement::Hitbox_V_Size.to_f - 0.01
+
+      return the_x, the_y, the_x + width, the_y + height
+    end
+
+    def is_touching_tile?(tile_x, tile_y)
+      the_x, the_y, width, height = position_data
+
+      return false unless tile_x >= the_x.floor && tile_x <= width.floor
+      return false unless tile_y >= the_y.floor && tile_y <= height.floor
+      return true
     end
 
     def event_has_anything_to_run?(event)
