@@ -1,5 +1,5 @@
 #This patch fixes the problem that caused the player to be stuck after being blown away
-#Este patch corrige o problem que fazia o personagem ficar preso depois de ser arremessado por um ataque
+#Este patch corrige o problema que fazia o personagem ficar preso depois de ser arremessado por um ataque
 
 class Game_Player < Game_Character
   def blow(d, power = 1)
