@@ -5,7 +5,7 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 2.4.2
+# Version: 2.4.3
 # You're free to use this script on any project
 #
 # Change Log:
@@ -1408,4 +1408,8 @@ if OrangeMovement::Block_Repeated_Event_Triggering == true
       $game_player.mark_tile_as_checked($game_player.x, $game_player.y)
     end
   end
+end
+
+class Game_Event < Game_Character
+  attr_reader :erased
 end
