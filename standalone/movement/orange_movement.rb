@@ -5,7 +5,7 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 2.4.3
+# Version: 2.4.4
 # You're free to use this script on any project
 #
 # Change Log:
@@ -13,6 +13,7 @@
 # v2.4: 2015-06-11
 # => Added a new option to ignore empty events when choosing what event to trigger
 # => If somehow the player is on the same tile as an unpassable event, they will now be able to leave that tile
+# => Fixed a small problem where events would turn to the wrong direction when activated
 #
 # v2.3: 2015-06-04
 # => Added settings to configure passable and unpassable tiles using regions
@@ -188,6 +189,9 @@ module OrangeMovement
   # Set this to true to trigger all available events everytime. For example: If the player steps on two different events with "on touch" trigger, both will be triggered if this is true
   # If this is false, only one of them will be triggered
   Trigger_All_Events = false
+
+  #If this is set to true (and Trigger_All_Events is false), when the player is teleported, the events of the tile the player is teleported to will only be triggered if the player leaves it and then touches it again
+  Ignore_Teleported_Tile = false
 
   # If this is true, events without any command won't be triggered 
   Ignore_Empty_Events = true
@@ -1405,11 +1409,43 @@ if OrangeMovement::Block_Repeated_Event_Triggering == true
       return if $game_party.in_battle
 
       $game_player.clear_checked_tiles
-      $game_player.mark_tile_as_checked($game_player.x, $game_player.y)
+      $game_player.mark_tile_as_checked($game_player.x, $game_player.y) if OrangeMovement::Ignore_Teleported_Tile
     end
   end
 end
 
 class Game_Event < Game_Character
   attr_reader :erased
+end
+
+class Game_Character < Game_CharacterBase
+  def turn_toward_player
+    sx = distance_x_from($game_player.float_x)
+    sy = distance_y_from($game_player.float_y)
+
+    if sx.abs < 1 && sy.abs < 1
+      set_direction(10 - $game_player.direction)
+    else
+      if sx.abs > sy.abs
+        set_direction(sx > 0 ? 4 : 6)
+      elsif sy != 0
+        set_direction(sy > 0 ? 8 : 2)
+      end
+    end
+  end
+
+  def turn_away_from_player
+    sx = distance_x_from($game_player.float_x)
+    sy = distance_y_from($game_player.float_y)
+
+    if sx.abs < 1 && sy.abs < 1
+      set_direction($game_player.direction)
+    else
+      if sx.abs > sy.abs
+        set_direction(sx > 0 ? 6 : 4)
+      elsif sy != 0
+        set_direction(sy > 0 ? 2 : 8)
+      end
+    end
+  end
 end
