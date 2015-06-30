@@ -5,10 +5,14 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 2.4.4
+# Version: 2.5
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v2.5: 2015-06-29
+# => Support for different step sizes
+# => Support for a different hitbox for each actor
 #
 # v2.4: 2015-06-11
 # => Added a new option to ignore empty events when choosing what event to trigger
@@ -103,7 +107,9 @@ module OrangeMovement
 
   #Should the player also avoid events?
   Auto_Avoid_Events_Diagonally = true
+  Auto_Avoid_Events_Diagonally_Only_When_Dashing = true
   Auto_Avoid_Events_Walking_Around = true
+  Auto_Avoid_Events_Walking_Around_Only_When_Dashing = true
   Auto_Avoid_Events_Max_Offset = 0.35
 
   #If this is set to true, the script will try to jump before trying to avoid an obstacle by walking diagonally
@@ -113,7 +119,7 @@ module OrangeMovement
   # If set to false, the feature won't even be loaded on rpg maker, to avoid possible script conflicts.
   # If set to true, the feature will always be available
   # If set to an integer value, the script will look for a switch with that ID to decide if the feature is enabled or not
-  Auto_Jump = true
+  Auto_Jump = false
 
   #Auto_Jump_Only_When_Dashing
   #If this is set to true, the auto jump will only be available when the player is dashing
@@ -175,7 +181,7 @@ module OrangeMovement
   #If it's set to an integer value, the script will look for an switch with that ID to determine if the script should be active or not
   Enabled = true
 
-  Enable_Hitbox = false
+  Enable_Hitbox = true
 
   Player_Hitbox_X_Offset = 0
   Player_Hitbox_Y_Offset = 0
@@ -207,17 +213,6 @@ module OrangeMovement
   #------------------------------------------------------------
 
   Step_Size = 1.0 / Tile_Sections
-  if Enable_Hitbox
-    Hitbox_X_Size = Player_Hitbox_X_Offset / 32.0
-    Hitbox_Y_Size = Player_Hitbox_Y_Offset / 32.0
-    Hitbox_H_Size = Player_Hitbox_Width / 32.0
-    Hitbox_V_Size = Player_Hitbox_Height / 32.0
-  else
-    Hitbox_X_Size = 0
-    Hitbox_Y_Size = 0
-    Hitbox_H_Size = 1
-    Hitbox_V_Size = 1
-  end
 
   def direction_goes_left?(direction)
     return [1, 4, 7].include?(direction)
@@ -237,6 +232,10 @@ module OrangeMovement
     return false if Enabled == false
     return $game_switches[Enabled] if Enabled.is_a?(Fixnum)
     return false
+  end
+
+  def input_direction_enabled?(d)
+    true
   end
 end
 
@@ -283,13 +282,11 @@ unless OrangeMovement::Enabled == false
       round_y(y_with_direction(y, d))
     end
 
-    def player_x_with_direction(x, d)
+    def player_x_with_direction(x, d, step_size = Step_Size)
       if enabled?
-        step_size = Step_Size
-        if $game_player.move_route_forcing
-          step_size = 1
-        end
-
+        # if $game_player.move_route_forcing
+        #   step_size = 1
+        # end
         if direction_goes_left?(d)
           return x - step_size
         elsif direction_goes_right?(d)
@@ -302,12 +299,11 @@ unless OrangeMovement::Enabled == false
       end
     end
 
-    def player_y_with_direction(y, d)
+    def player_y_with_direction(y, d, step_size = Step_Size)
       if enabled?
-        step_size = Step_Size
-        if $game_player.move_route_forcing
-          step_size = 1
-        end
+        # if $game_player.move_route_forcing
+        #   step_size = 1
+        # end
 
         if direction_goes_down?(d)
           return y + step_size
@@ -321,12 +317,12 @@ unless OrangeMovement::Enabled == false
       end
     end
 
-    def round_player_x_with_direction(x, d)
-      round_x(player_x_with_direction(x, d))
+    def round_player_x_with_direction(x, d, step_size = Step_Size)
+      round_x(player_x_with_direction(x, d, step_size))
     end
 
-    def round_player_y_with_direction(y, d)
-      round_y(player_y_with_direction(y, d))
+    def round_player_y_with_direction(y, d, step_size = Step_Size)
+      round_y(player_y_with_direction(y, d, step_size))
     end
 
     alias :hudell_orange_movement_check_passage :check_passage
@@ -341,7 +337,7 @@ unless OrangeMovement::Enabled == false
           return false if region == OrangeMovement::Map_Never_Passable_Region
         end
       end
-
+      
       return hudell_orange_movement_check_passage(x, y, bit)
     end
   end
@@ -372,6 +368,34 @@ unless OrangeMovement::Enabled == false
 
     def float_y
       @y
+    end
+
+    def hitbox_y
+      @y + hitbox_y_size
+    end
+
+    def hitbox_x
+      @x + hitbox_x_size
+    end
+
+    def hitbox_x_size
+      actor.hitbox_x_size
+    end
+
+    def hitbox_y_size
+      actor.hitbox_y_size
+    end
+
+    def hitbox_v_size
+      actor.hitbox_v_size
+    end
+
+    def hitbox_h_size
+      actor.hitbox_h_size
+    end
+
+    def hitbox_bottom
+      hitbox_y + hitbox_h_size
     end
 
     def front_x
@@ -418,11 +442,15 @@ unless OrangeMovement::Enabled == false
       end
 
       false
-    end    
+    end
+
+    def my_step_size
+      Step_Size
+    end
 
     def tileset_passable?(x, y, d)
-      x2 = $game_map.round_player_x_with_direction(x, d)
-      y2 = $game_map.round_player_y_with_direction(y, d)
+      x2 = $game_map.round_player_x_with_direction(x, d, my_step_size)
+      y2 = $game_map.round_player_y_with_direction(y, d, my_step_size)
       return false unless $game_map.valid?(x2, y2)
 
       return true if @through || debug_through?
@@ -436,8 +464,8 @@ unless OrangeMovement::Enabled == false
       return false unless tileset_passable?(x, y, d)
       return true if @through || debug_through?
 
-      x2 = $game_map.round_player_x_with_direction(x, d)
-      y2 = $game_map.round_player_y_with_direction(y, d)
+      x2 = $game_map.round_player_x_with_direction(x, d, my_step_size)
+      y2 = $game_map.round_player_y_with_direction(y, d, my_step_size)
 
       return false if collide_with_characters?(x2, y2)
       return true
@@ -445,10 +473,10 @@ unless OrangeMovement::Enabled == false
 
     def run_for_all_positions(x, y, &block)
       if Enable_Hitbox
-        first_x = (x + Hitbox_X_Size).floor
-        last_x = (x + Hitbox_X_Size + Hitbox_H_Size - 0.01).floor
-        first_y = (y + Hitbox_Y_Size).floor
-        last_y = (y + Hitbox_Y_Size + Hitbox_V_Size - 0.01).floor
+        first_x = (x + hitbox_x_size).floor
+        last_x = (x + hitbox_x_size + hitbox_h_size - 0.01).floor
+        first_y = (y + hitbox_y_size).floor
+        last_y = (y + hitbox_y_size + hitbox_v_size - 0.01).floor
 
         for new_x in first_x..last_x
           for new_y in first_y..last_y
@@ -503,18 +531,21 @@ unless OrangeMovement::Enabled == false
       end
     end  
 
-    def can_go_up?(x, y, recursive = true)
+    def can_go_up?(x, y, recursive = true, step_size = Step_Size)
       if Enable_Hitbox
-        the_x = x + Hitbox_X_Size
-        the_y = y + Hitbox_Y_Size
+        the_x = x + hitbox_x_size
+        the_y = y + hitbox_y_size
 
-        end_x = the_x + Hitbox_H_Size - 0.01
-        destination_y = the_y - Step_Size
+        end_x = the_x + hitbox_h_size - 0.01
+        destination_y = the_y - step_size
 
         if the_y.floor != destination_y.floor
           for new_x in the_x.floor..end_x.floor
+
+
             return false unless $game_map.passable?(new_x, the_y.floor, Direction.up)
             return false unless $game_map.passable?(new_x, destination_y.floor, Direction.down)
+            # return false unless $game_map.passable?(new_x, destination_y.floor, Direction.up)
           end
         else
           for new_x in the_x.floor..end_x.floor
@@ -524,7 +555,7 @@ unless OrangeMovement::Enabled == false
       else
         y_diff = y.floor - y
 
-        if y_diff < Step_Size
+        if y_diff < step_size
           return false unless $game_map.passable?(x.floor, y.floor, Direction.up)
         end        
 
@@ -538,13 +569,13 @@ unless OrangeMovement::Enabled == false
       return true
     end
 
-    def can_go_left?(x, y, recursive = true)
+    def can_go_left?(x, y, recursive = true, step_size = Step_Size)
       if Enable_Hitbox
-        the_x = x + Hitbox_X_Size
-        the_y = y + Hitbox_Y_Size
+        the_x = x + hitbox_x_size
+        the_y = y + hitbox_y_size
 
-        end_y = the_y + Hitbox_V_Size - 0.01
-        destination_x = the_x - Step_Size
+        end_y = the_y + hitbox_v_size - 0.01
+        destination_x = the_x - step_size
 
         if the_x.floor != destination_x.floor
           for new_y in the_y.floor..end_y.floor
@@ -559,7 +590,7 @@ unless OrangeMovement::Enabled == false
       else
         x_diff = x.floor - x
 
-        if x_diff < Step_Size
+        if x_diff < step_size
           return false unless $game_map.passable?(x.floor, y.floor, Direction.left)
         end
   
@@ -574,15 +605,15 @@ unless OrangeMovement::Enabled == false
       return true
     end
 
-    def can_go_down?(x, y, recursive = true)
+    def can_go_down?(x, y, recursive = true, step_size = Step_Size)
       if Enable_Hitbox
-        the_x = x + Hitbox_X_Size
-        the_y = y + Hitbox_Y_Size
+        the_x = x + hitbox_x_size
+        the_y = y + hitbox_y_size
 
-        end_x = the_x + Hitbox_H_Size - 0.01
-        end_y = the_y + Hitbox_V_Size - 0.01
-        destination_y = the_y + Step_Size
-        destination_end_y = end_y + Step_Size
+        end_x = the_x + hitbox_h_size - 0.01
+        end_y = the_y + hitbox_v_size - 0.01
+        destination_y = the_y + step_size
+        destination_end_y = end_y + step_size
 
         if end_y.floor != destination_end_y.floor
           for new_x in the_x.floor..end_x.floor
@@ -600,7 +631,7 @@ unless OrangeMovement::Enabled == false
           return false unless $game_map.passable?(x.floor + 1, y.floor + 1, Direction.up)
         end
 
-        if y > y.floor && y + Step_Size >= y.ceil
+        if y > y.floor && y + step_size >= y.ceil
           return false unless $game_map.passable?(x.ceil, y.ceil, Direction.down)
         end
   
@@ -614,15 +645,15 @@ unless OrangeMovement::Enabled == false
       true
     end
 
-    def can_go_right?(x, y, recursive = true)
+    def can_go_right?(x, y, recursive = true, step_size = Step_Size)
       if Enable_Hitbox
-        the_x = x + Hitbox_X_Size
-        the_y = y + Hitbox_Y_Size
+        the_x = x + hitbox_x_size
+        the_y = y + hitbox_y_size
 
-        end_x = the_x + Hitbox_H_Size - 0.01
-        end_y = the_y + Hitbox_V_Size - 0.01
-        destination_x = the_x + Step_Size
-        destination_end_x = end_x + Step_Size
+        end_x = the_x + hitbox_h_size - 0.01
+        end_y = the_y + hitbox_v_size - 0.01
+        destination_x = the_x + step_size
+        destination_end_x = end_x + step_size
 
         if end_x.floor != destination_end_x.floor
           for new_y in the_y.floor..end_y.floor
@@ -634,7 +665,7 @@ unless OrangeMovement::Enabled == false
         return false unless $game_map.passable?(x.floor, y.floor, Direction.right)
         return false unless $game_map.passable?(x.floor + 1, y.floor, Direction.left)
 
-        if x > x.floor && x + Step_Size >= x.ceil
+        if x > x.floor && x + step_size >= x.ceil
           return false unless $game_map.passable?(x.ceil, y.floor, Direction.right)
         end
 
@@ -643,7 +674,7 @@ unless OrangeMovement::Enabled == false
           #I'm not sure if "x.floor + 1" is right, shouldn't it be x.ceil and only if that's different from x.floor?
           return false unless $game_map.passable?(x.floor + 1, y.ceil, Direction.left)
 
-          if y + Step_Size >= y.ceil
+          if y + step_size >= y.ceil
             return false unless $game_map.passable?(x.floor, y.floor, Direction.right)
           end
         end        
@@ -675,8 +706,8 @@ unless OrangeMovement::Enabled == false
     end
 
     def diagonal_passable?(x, y, horz, vert)
-      x2 = $game_map.round_player_x_with_direction(x, horz)
-      y2 = $game_map.round_player_y_with_direction(y, vert)
+      x2 = $game_map.round_player_x_with_direction(x, horz, my_step_size)
+      y2 = $game_map.round_player_y_with_direction(y, vert, my_step_size)
 
       if passable?(x, y, vert) && passable?(x, y2, horz)
         return true
@@ -694,10 +725,10 @@ unless OrangeMovement::Enabled == false
       if @move_succeed
         set_direction(d)
         
-        @x = $game_map.round_player_x_with_direction(@x, d)
-        @y = $game_map.round_player_y_with_direction(@y, d)
-        @real_x = $game_map.player_x_with_direction(@x, reverse_dir(d))
-        @real_y = $game_map.player_y_with_direction(@y, reverse_dir(d))
+        @x = $game_map.round_player_x_with_direction(@x, d, my_step_size)
+        @y = $game_map.round_player_y_with_direction(@y, d, my_step_size)
+        @real_x = $game_map.player_x_with_direction(@x, reverse_dir(d), my_step_size)
+        @real_y = $game_map.player_y_with_direction(@y, reverse_dir(d), my_step_size)
 
         increase_steps
       elsif turn_ok
@@ -709,10 +740,10 @@ unless OrangeMovement::Enabled == false
     def module_move_diagonal(horz, vert)
       @move_succeed = diagonal_passable?(@x, @y, horz, vert)
       if @move_succeed
-        @x = $game_map.round_player_x_with_direction(@x, horz)
-        @y = $game_map.round_player_y_with_direction(@y, vert)
-        @real_x = $game_map.player_x_with_direction(@x, reverse_dir(horz))
-        @real_y = $game_map.player_y_with_direction(@y, reverse_dir(vert))
+        @x = $game_map.round_player_x_with_direction(@x, horz, my_step_size)
+        @y = $game_map.round_player_y_with_direction(@y, vert, my_step_size)
+        @real_x = $game_map.player_x_with_direction(@x, reverse_dir(horz), my_step_size)
+        @real_y = $game_map.player_y_with_direction(@y, reverse_dir(vert), my_step_size)
         increase_steps
       end
       set_direction(horz) if @direction == reverse_dir(horz)
@@ -780,6 +811,14 @@ unless OrangeMovement::Enabled == false
     include OrangeMovement
     include Orange_Character
 
+    def my_step_size
+      if move_route_forcing
+        1
+      else
+        Step_Size
+      end
+    end
+
     alias :hudell_orange_movement_game_player_map_passable? :map_passable?
     def map_passable?(x, y, d)
       return hudell_orange_movement_game_player_map_passable?(x, y, d) unless enabled?
@@ -824,10 +863,10 @@ unless OrangeMovement::Enabled == false
     end
 
     def position_data
-      the_x = @x + OrangeMovement::Hitbox_X_Size
-      the_y = @y + OrangeMovement::Hitbox_Y_Size
-      width = OrangeMovement::Hitbox_H_Size.to_f - 0.01
-      height = OrangeMovement::Hitbox_V_Size.to_f - 0.01
+      the_x = @x + hitbox_x_size
+      the_y = @y + hitbox_y_size
+      width = hitbox_h_size.to_f - 0.01
+      height = hitbox_v_size.to_f - 0.01
 
       return the_x, the_y, the_x + width, the_y + height
     end
@@ -908,6 +947,8 @@ unless OrangeMovement::Enabled == false
         button = :DOWN
         
         d = Input.dir4
+        return false unless input_direction_enabled?(d)
+
         case d
           when 2; button = :DOWN
           when 4; button = :LEFT
@@ -931,15 +972,27 @@ unless OrangeMovement::Enabled == false
           should_try_avoiding_walking_around = Auto_Avoid == true && Auto_Avoid_Max_Offset != false
 
           if tileset_passable
-            x2 = $game_map.round_player_x_with_direction(x, d)
-            y2 = $game_map.round_player_y_with_direction(y, d)
+            x2 = $game_map.round_player_x_with_direction(@x, d, my_step_size)
+            y2 = $game_map.round_player_y_with_direction(@y, d, my_step_size)
 
             if collide_with_characters?(x2, y2)
               if should_try_avoiding_diagonally
-                should_try_avoiding_diagonally = Auto_Avoid_Events_Diagonally
+                if Auto_Avoid_Events_Diagonally
+                  if Auto_Avoid_Events_Diagonally_Only_When_Dashing
+                    should_try_avoiding_diagonally = dash?
+                  end
+                else
+                  should_try_avoiding_diagonally = false
+                end
               end
               if should_try_avoiding_walking_around
-                should_try_avoiding_walking_around = Auto_Avoid_Events_Walking_Around
+                if Auto_Avoid_Events_Walking_Around
+                  if Auto_Avoid_Events_Walking_Around_Only_When_Dashing
+                    should_try_avoiding_walking_around = dash?
+                  end
+                else
+                  should_try_avoiding_walking_around = false
+                end
                 max_offset = Auto_Avoid_Events_Max_Offset
               end
             end
@@ -1414,10 +1467,6 @@ if OrangeMovement::Block_Repeated_Event_Triggering == true
   end
 end
 
-class Game_Event < Game_Character
-  attr_reader :erased
-end
-
 class Game_Character < Game_CharacterBase
   def turn_toward_player
     sx = distance_x_from($game_player.float_x)
@@ -1448,4 +1497,70 @@ class Game_Character < Game_CharacterBase
       end
     end
   end
+end
+
+class RPG::Actor
+  attr_reader :note
+end
+
+class Game_Actor < Game_Battler
+  def hitbox_x
+    begin
+      @hitbox_x = actor.note.scan(/hitbox\_x_*=_*(\-?[0-9]+)/)[0][0].to_i if @hitbox_x.nil?
+    rescue
+      @hitbox_x = Player_Hitbox_X_Offset
+    end
+
+    @hitbox_x
+  end
+
+  def hitbox_y
+    begin
+      @hitbox_y = actor.note.scan(/hitbox\_y_*=_*(\-?[0-9]+)/)[0][0].to_i if @hitbox_y.nil?
+    rescue
+      @hitbox_y = Player_Hitbox_Y_Offset
+    end
+
+    @hitbox_y
+  end
+
+  def hitbox_w
+    begin
+      @hitbox_w = actor.note.scan(/hitbox\_w_*=_*(\-?[0-9]+)/)[0][0].to_i if @hitbox_w.nil?
+    rescue
+      @hitbox_w = Player_Hitbox_Width
+    end
+
+    @hitbox_w
+  end
+
+  def hitbox_h
+    begin
+      @hitbox_h = actor.note.scan(/hitbox\_h_*=_*(\-?[0-9]+)/)[0][0].to_i if @hitbox_h.nil?
+    rescue
+      @hitbox_h = Player_Hitbox_Height
+    end
+
+    @hitbox_h
+  end
+
+  def hitbox_x_size
+    hitbox_x / 32.0
+  end
+
+  def hitbox_y_size
+    hitbox_y / 32.0
+  end
+
+  def hitbox_h_size
+    hitbox_w / 32.0
+  end
+
+  def hitbox_v_size
+    hitbox_h / 32.0
+  end
+end
+
+class Game_Event < Game_Character
+  attr_reader :erased
 end
