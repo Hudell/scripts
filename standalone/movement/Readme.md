@@ -18,3 +18,17 @@ Similarly, you can let the main character walk around obstacles automatically.
 <li><strong>Falling from higher places</strong></li>
 You can also configure areas on your map where the player can fall
 </ul>
+
+Downloads
+================================
+
+[Get the script](orange_movement.rb)
+
+Debug Tools:
+--------------------------
+
+[Draw Collision Map](draw_collision_map.rb)
+
+[Draw Current Hitox](draw_current_hitbox.rb)
+
+[Draw Current Tile](draw_current_tile.rb)
