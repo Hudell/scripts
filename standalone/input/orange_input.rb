@@ -1,3 +1,12 @@
+#------------------------------------------------------------
+#------------------------------------------------------------
+#-------------------  ORANGE INPUT SYSTEM  ------------------
+#------------------------------------------------------------
+#------------------------------------------------------------
+#
+# Script created by Hudell (www.hudell.com)
+# You're free to use this script on any project
+
 module OrangeInput
   KEY_CODES = {
     :mouse_left_button => 0x01,
@@ -43,7 +52,7 @@ module OrangeInput
     :insert => 0x2d,
     :delete => 0x2e,
     :help => 0x2f,
-    :n0 => 0x30,
+    :key_0 => 0x30,
     :key_1 => 0x31,
     :key_2 => 0x32,
     :key_3 => 0x33,
@@ -241,6 +250,10 @@ module OrangeInput
 
   def self.key_code(key)
     key_codes[key] || 0
+  end
+
+  def self.key_symbol(code)
+    key_codes.index(code)
   end
 
   def self.up_button
@@ -521,6 +534,10 @@ module OrangeInput
   end
 
   def self.triggered_any
+    triggered_any?
+  end
+
+  def self.triggered_any?
     @triggered_any
   end
   
@@ -539,7 +556,8 @@ module OrangeInput
         return SYM_KEYS[keys].any? {|key| (@pressed[key]  and !@triggered[key]) }
       elsif (key_codes.key?(keys))
         k = key_codes[keys]
-        return (@pressed[k] and !@triggered[k])
+        return self.press?(k)
+        # return (@pressed[k] and !@triggered[k])
       else
         return false
       end
@@ -555,7 +573,8 @@ module OrangeInput
       if SYM_KEYS.key?(keys)
         return SYM_KEYS[keys].any? {|key| @triggered[key]}
       elsif key_codes.key?(keys)
-        return @triggered[key_codes[keys]]
+        return self.trigger?(key_codes[keys])
+        # return @triggered[key_codes[keys]]
       else
         return false
       end
@@ -572,7 +591,8 @@ module OrangeInput
       if SYM_KEYS.key?(keys)
         return SYM_KEYS[keys].any? {|key| @repeated[key] == 1 || @repeated[key] == 16}
       elsif key_codes.key?(keys)
-        return @repeated[key_codes[keys]] == 1 || @repeated[key_codes[keys]] == 16
+        return self.repeat?(key_codes[keys])
+        # return @repeated[key_codes[keys]] == 1 || @repeated[key_codes[keys]] == 16
       else
         return false
       end
@@ -588,7 +608,8 @@ module OrangeInput
       if SYM_KEYS.key?(keys)
         return SYM_KEYS[keys].any? {|key| @released[key]}
       elsif key_codes.key?(keys)
-        return @released[key_codes[keys]]
+        return self.release?(key_codes[keys])
+        # return @released[key_codes[keys]]
       else
         return false
       end
