@@ -1504,6 +1504,8 @@ class RPG::Actor
 end
 
 class Game_Actor < Game_Battler
+  include OrangeMovement
+  
   def hitbox_x
     begin
       @hitbox_x = actor.note.scan(/hitbox\_x_*=_*(\-?[0-9]+)/)[0][0].to_i if @hitbox_x.nil?
