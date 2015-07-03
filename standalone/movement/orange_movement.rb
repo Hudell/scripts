@@ -5,7 +5,7 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 2.5
+# Version: 2.5.1
 # You're free to use this script on any project
 #
 # Change Log:
@@ -1497,10 +1497,6 @@ class Game_Character < Game_CharacterBase
       end
     end
   end
-end
-
-class RPG::Actor
-  attr_reader :note
 end
 
 class Game_Actor < Game_Battler
