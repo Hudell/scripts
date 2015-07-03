@@ -10,6 +10,8 @@
 # Requires Orange Input
 #
 module OrangeCheats
+  # Main_Key = :tab
+  Main_Key = nil
   
   # 'cheat_code' => switch_id
   Cheat_List = {
@@ -27,7 +29,7 @@ module OrangeCheats
   def self.check_input
     @last_cheat = "" if @last_cheat.nil?
 
-    if OrangeInput.press?(:control)
+    if Main_Key.nil? || OrangeInput.press?(Main_Key)
       if OrangeInput.triggered_any?
         @last_cheat += get_key_description(OrangeInput.last_triggered_key)
 
@@ -36,7 +38,7 @@ module OrangeCheats
             @last_cheat = ""
 
             $game_switches[Cheat_List[key]] = true
-            break
+            return
           end
         end
       end
@@ -54,5 +56,30 @@ class Scene_Base
     hudell_orange_cheats_update
 
     OrangeCheats.check_input
+  end
+end
+
+unless OrangeCheats::Main_Key.nil?
+  module Input
+    class << self
+      alias :hudell_press? :press?
+      alias :hudell_trigger? :trigger?
+    end
+
+    def self.press?(key)
+      if OrangeInput.press?(OrangeCheats::Main_Key)
+        false
+      else
+        hudell_press?(key)
+      end
+    end
+
+    def self.trigger?(key)
+      if OrangeInput.press?(OrangeCheats::Main_Key)
+        false
+      else
+        hudell_trigger?(key)
+      end
+    end
   end
 end
