@@ -14,7 +14,10 @@ module OrangeCheats
   Main_Key = nil
   
   # 'cheat_code' => switch_id
-  Cheat_List = {
+  Cheat_Switch_List = {
+  }
+  # 'cheat_code' => common_event_id
+  Cheat_Event_List = {
   }
 
   def self.get_key_description(key)
@@ -33,12 +36,22 @@ module OrangeCheats
       if OrangeInput.triggered_any?
         @last_cheat += get_key_description(OrangeInput.last_triggered_key)
 
-        Cheat_List.keys.each do |key|
+        Cheat_Switch_List.keys.each do |key|
           if @last_cheat.end_with?(key)
             @last_cheat = ""
 
-            $game_switches[Cheat_List[key]] = true
+            $game_switches[Cheat_Switch_List[key]] = true
             return
+          end
+        end
+
+        if SceneManager.scene.is_a? Scene_Map
+          Cheat_Event_List.keys.each do |key|
+            if @last_cheat.end_with?(key)
+              @last_cheat = ""
+              $game_temp.reserve_common_event(Cheat_Event_List[key])
+              return
+            end
           end
         end
       end
