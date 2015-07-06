@@ -5,10 +5,13 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 2.5.1
+# Version: 2.6
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v2.6: 2015-07-05
+# => Added functionality to use a different sprite for dashing actors
 #
 # v2.5: 2015-06-29
 # => Support for different step sizes
@@ -74,8 +77,6 @@ module OrangeMovement
   # 2 - Will move 16px at each step
   # 4 - Will move 8px at each step - RECOMMENDED
   # 8 - Will move 4px at each step - ALSO GOOD
-  # 16 - Will move 2px at each step
-  # 32 - Will move 1px at each step
   # Other values between 1 and 32 may or may not work.
 
   Tile_Sections = 4
@@ -819,6 +820,36 @@ unless OrangeMovement::Enabled == false
       end
     end
 
+    alias :hudell_orange_movement_game_player_update :update
+    def update
+      @was_moving = false if @was_moving.nil?
+
+      #Change actor graphic if they are running or not
+      if dash? && (moving? || @was_moving)
+        new_sprite_name = actor.dashing_sprite_name
+        new_sprite_index = actor.dashing_sprite_index
+      else
+        new_sprite_name = actor.walking_sprite_name
+        new_sprite_index = actor.walking_sprite_index
+      end
+
+      unless new_sprite_name.nil? || new_sprite_index.nil?
+        if new_sprite_name != $game_player.character_name || new_sprite_index != $game_player.character_index
+          $game_map.interpreter.change_actor_graphic(actor.id, new_sprite_name, new_sprite_index, actor.face_name, actor.face_index)
+        end
+      end
+
+      @was_moving = moving?
+      hudell_orange_movement_game_player_update
+      
+      unless Auto_Jump == false
+        if enabled?
+          @jump_delay = Auto_Jump_Delay if @jump_delay.nil?
+          @jump_delay -= 1 unless @jump_delay == 0
+        end
+      end
+    end
+
     alias :hudell_orange_movement_game_player_map_passable? :map_passable?
     def map_passable?(x, y, d)
       return hudell_orange_movement_game_player_map_passable?(x, y, d) unless enabled?
@@ -1144,15 +1175,6 @@ unless OrangeMovement::Enabled == false
         return true
       end
 
-      alias :hudell_orange_movement_game_player_update :update
-      def update
-        hudell_orange_movement_game_player_update
-        if enabled?
-          @jump_delay = Auto_Jump_Delay if @jump_delay.nil?
-          @jump_delay -= 1 unless @jump_delay == 0
-        end
-      end
-
       def on_jump
         return if Auto_Jump_Sound_Effect == false
 
@@ -1467,6 +1489,14 @@ if OrangeMovement::Block_Repeated_Event_Triggering == true
   end
 end
 
+class Game_Interpreter
+  #Use command 322 to change it, this is done to keep compatibility with effectus
+  def change_actor_graphic(actor_id, sprite_name, sprite_index, face_name, face_index)
+    @params = [actor_id, sprite_name, sprite_index, face_name, face_index]
+    command_322
+  end
+end
+
 class Game_Character < Game_CharacterBase
   def turn_toward_player
     sx = distance_x_from($game_player.float_x)
@@ -1556,6 +1586,58 @@ class Game_Actor < Game_Battler
 
   def hitbox_v_size
     hitbox_h / 32.0
+  end
+
+  def dashing_sprite_name
+    begin
+      @dashing_sprite_name = actor.note.scan(/dashing\_sprite\_name_*=_*(.*)$/)[0][0].strip if @dashing_sprite_name.nil?
+    rescue
+    end
+
+    @dashing_sprite_name
+  end
+
+  def dashing_sprite_index
+    begin
+      @dashing_sprite_index = actor.note.scan(/dashing\_sprite\_index_*=_*(.*)$/)[0][0].to_i if @dashing_sprite_index.nil?
+    rescue
+    end
+
+    @dashing_sprite_index
+  end
+
+  def dashing_sprite_name=(value)
+    @dashing_sprite_name = value
+  end
+
+  def dashing_sprite_index=(value)
+    @dashing_sprite_index = value
+  end
+
+  def walking_sprite_name
+    begin
+      @walking_sprite_name = actor.note.scan(/walking\_sprite\_name_*=_*(.*)$/)[0][0].strip if @walking_sprite_name.nil?
+    rescue
+    end
+
+    @walking_sprite_name
+  end
+
+  def walking_sprite_index
+    begin
+      @walking_sprite_index = actor.note.scan(/walking\_sprite\_index_*=_*(.*)$/)[0][0].to_i if @walking_sprite_index.nil?
+    rescue
+    end
+
+    @walking_sprite_index
+  end
+
+  def walking_sprite_name=(value)
+    @walking_sprite_name = value
+  end
+
+  def walking_sprite_index=(value)
+    @walking_sprite_index = value
   end
 end
 
