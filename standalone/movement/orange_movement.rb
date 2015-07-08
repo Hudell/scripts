@@ -5,10 +5,13 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 2.6
+# Version: 2.7
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v2.7: 2015-07-07
+# => Fixed a problem where fixed routes could move the player into blocked tiles
 #
 # v2.6: 2015-07-05
 # => Added functionality to use a different sprite for dashing actors
@@ -80,6 +83,12 @@ module OrangeMovement
   # Other values between 1 and 32 may or may not work.
 
   Tile_Sections = 4
+
+  #If this is set to false, fixed move routes won't use pixel movement, moving a whole tile instead 
+  Fixed_Move_Route_Use_Pixel_Movement = false
+
+  #If this is true (and Fixed_Move_Route_Use_Pixel_Movement is false), the player will be aligned to the grid on the first step of a fixed move route
+  Fixed_Move_Route_Align_To_Grid = true
 
   #Set this to false if you don't want the player to walk diagonally
   Enable_Diagonal_Movement = true
@@ -182,11 +191,18 @@ module OrangeMovement
   #If it's set to an integer value, the script will look for an switch with that ID to determine if the script should be active or not
   Enabled = true
 
+  #If this is true, the new collision system will be used, you shouldn't use the old one anymore (it may not me compatible with all new features)
   Enable_Hitbox = true
 
+  #The default hitbox configuration for the player, will only be used when there's no hitbox configuration on the actor database
+
+  #Player_Hitbox_X_Offset - move the left position of the hitbox in pixels - Can be configured on the actor database adding this line on the notes: hitbox_x=0
   Player_Hitbox_X_Offset = 0
+  #Player_Hitbox_Y_Offset - move the top position of the hitbox in pixels - Can be configured on the actor database adding this line on the notes: hitbox_y=0
   Player_Hitbox_Y_Offset = 0
+  #Player_Hitbox_Width - width of the hitbox in pixels - Can be configured on the actor database adding this line on the notes: hitbox_w=0
   Player_Hitbox_Width = 32
+  #Player_Hitbox_Height - height of the hitbox in pixels - Can be configured on the actor database adding this line on the notes: hitbox_h=0
   Player_Hitbox_Height = 32
 
   #If those are set to an integer value, all tiles configured with that region will be always or never passable
@@ -206,6 +222,21 @@ module OrangeMovement
   # If set to true, an event will only be triggered for a second time if you leave the tile it is on and step on the tile again. If you just move into the tile, it won't be triggered.
   # If set to false, the event will be triggered again after each step
   Block_Repeated_Event_Triggering = true
+
+  # You can also configure a different sprite name/sprite index to use when the player is dashing. To enable this, add those configuration lines on the notes of the actor database:
+  #
+  #       dashing_sprite_name = sprite_name
+  #       dashing_sprite_index = 0
+  #       walking_sprite_name = sprite_name
+  #       walking_sprite_index = 0
+  #
+  # You can also change them at any time with those script calls:
+  #
+  #       $game_player.actor.dashing_sprite_name = 'sprite_name'
+  #       $game_player.actor.dashing_sprite_index = 0
+  #       $game_player.actor.walking_sprite_name = 'sprite_name'
+  #       $game_player.actor.walking_sprite_index = 0
+  #
 
   #------------------------------------------------------------
   #------------------------------------------------------------
@@ -725,11 +756,30 @@ unless OrangeMovement::Enabled == false
       @move_succeed = passable?(@x, @y, d)
       if @move_succeed
         set_direction(d)
+
+        if move_route_forcing && Fixed_Move_Route_Use_Pixel_Movement == false && Fixed_Move_Route_Align_To_Grid == true
+          case d
+          when Direction.left
+            step_size = @x - @x.floor
+          when Direction.right
+            step_size = @x.ceil - @x
+          when Direction.up
+            step_size = @y - @y.floor
+          when Direction.down
+            step_size = @y.ceil - @y
+          else
+            step_size = 0
+          end
+
+          step_size = my_step_size if step_size == 0
+        else
+          step_size = my_step_size
+        end
         
-        @x = $game_map.round_player_x_with_direction(@x, d, my_step_size)
-        @y = $game_map.round_player_y_with_direction(@y, d, my_step_size)
-        @real_x = $game_map.player_x_with_direction(@x, reverse_dir(d), my_step_size)
-        @real_y = $game_map.player_y_with_direction(@y, reverse_dir(d), my_step_size)
+        @x = $game_map.round_player_x_with_direction(@x, d, step_size)
+        @y = $game_map.round_player_y_with_direction(@y, d, step_size)
+        @real_x = $game_map.player_x_with_direction(@x, reverse_dir(d), step_size)
+        @real_y = $game_map.player_y_with_direction(@y, reverse_dir(d), step_size)
 
         increase_steps
       elsif turn_ok
@@ -741,10 +791,36 @@ unless OrangeMovement::Enabled == false
     def module_move_diagonal(horz, vert)
       @move_succeed = diagonal_passable?(@x, @y, horz, vert)
       if @move_succeed
-        @x = $game_map.round_player_x_with_direction(@x, horz, my_step_size)
-        @y = $game_map.round_player_y_with_direction(@y, vert, my_step_size)
-        @real_x = $game_map.player_x_with_direction(@x, reverse_dir(horz), my_step_size)
-        @real_y = $game_map.player_y_with_direction(@y, reverse_dir(vert), my_step_size)
+        if move_route_forcing && Fixed_Move_Route_Use_Pixel_Movement == false && Fixed_Move_Route_Align_To_Grid == true
+          case horz
+          when Direction.left
+            horz_step_size = @x - @x.floor
+          when Direction.right
+            horz_step_size = @x.ceil - @x
+          else
+            horz_step_size = 0
+          end
+
+          case vert
+          when Direction.up
+            vert_step_size = @y - @y.floor
+          when Direction.down
+            vert_step_size = @y.ceil - @y
+          else
+            vert_step_size = 0
+          end
+
+          horz_step_size = my_step_size if horz_step_size == 0
+          vert_step_size = my_step_size if vert_step_size == 0
+        else
+          vert_step_size = my_step_size
+          horz_step_size = my_step_size
+        end
+
+        @x = $game_map.round_player_x_with_direction(@x, horz, horz_step_size)
+        @y = $game_map.round_player_y_with_direction(@y, vert, vert_step_size)
+        @real_x = $game_map.player_x_with_direction(@x, reverse_dir(horz), horz_step_size)
+        @real_y = $game_map.player_y_with_direction(@y, reverse_dir(vert), vert_step_size)
         increase_steps
       end
       set_direction(horz) if @direction == reverse_dir(horz)
@@ -813,7 +889,7 @@ unless OrangeMovement::Enabled == false
     include Orange_Character
 
     def my_step_size
-      if move_route_forcing
+      if move_route_forcing && Fixed_Move_Route_Use_Pixel_Movement == false
         1
       else
         Step_Size
