@@ -5,7 +5,7 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell
-# Version: 1.5
+# Version: 1.6
 # You're free to use this script on any project
 
 class Game_CharacterBase
@@ -13,6 +13,8 @@ class Game_CharacterBase
   attr_writer :y
   attr_writer :real_x
   attr_writer :real_y
+  attr_writer :zoom_x
+  attr_writer :zoom_y
 
   def shake(x_offset = 0.3, y_offset = 0.3, frames = 30)
     (frames / 6).times do
@@ -71,6 +73,14 @@ class Game_CharacterBase
     return @origin_y
   end
 
+  def zoom_x
+    @zoom_x || 1
+  end
+
+  def zoom_y
+    @zoom_y || 1
+  end
+
   def angle
     return 0 if @angle.nil?
     return @angle
@@ -121,7 +131,12 @@ class Sprite_Character < Sprite_Base
 
     self.angle = character.angle
     update_flash
+    update_zoom
+  end
 
+  def update_zoom
+    self.zoom_x = @character.zoom_x
+    self.zoom_y = @character.zoom_y
   end
 
   def update_flash
