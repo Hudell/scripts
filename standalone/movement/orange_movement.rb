@@ -480,12 +480,16 @@ unless OrangeMovement::Enabled == false
       Step_Size
     end
 
+    def custom_through?
+      false
+    end
+
     def tileset_passable?(x, y, d)
       x2 = $game_map.round_player_x_with_direction(x, d, my_step_size)
       y2 = $game_map.round_player_y_with_direction(y, d, my_step_size)
       return false unless $game_map.valid?(x2, y2)
 
-      return true if @through || debug_through?
+      return true if @through || debug_through? || custom_through?
       return false unless map_passable?(x, y, d)
       return false unless map_passable?(x2, y2, reverse_dir(d))
 
@@ -494,7 +498,7 @@ unless OrangeMovement::Enabled == false
 
     def passable?(x, y, d)
       return false unless tileset_passable?(x, y, d)
-      return true if @through || debug_through?
+      return true if @through || debug_through? || custom_through?
 
       x2 = $game_map.round_player_x_with_direction(x, d, my_step_size)
       y2 = $game_map.round_player_y_with_direction(y, d, my_step_size)
@@ -1521,7 +1525,7 @@ unless OrangeMovement::Enabled == false
         return false unless $game_map.valid?(x2, y2)
         return false unless $game_map.valid?(x3, y3)
 
-        return true if @through || debug_through?
+        return true if @through || debug_through? || custom_through?
         return false unless map_passable?(x, y, d)
         return false unless map_passable?(x2, y2, reverse_dir(d))
         return false unless map_passable?(x2, y2, d)
@@ -1719,4 +1723,72 @@ end
 
 class Game_Event < Game_Character
   attr_reader :erased
+
+  attr_writer :hitbox_x
+  attr_writer :hitbox_y
+  attr_writer :hitbox_width
+  attr_writer :hitbox_height
+
+  def get_config(regex, default)
+    return default if @list.nil?
+
+    @list.each do |command|
+      if command.code == 108 || command.code == 408
+        begin
+          result = command.parameters[0].scan(regex)
+          unless result.nil?
+            value = result[0][0].to_i
+            return value
+          end
+        rescue
+        end
+      end
+    end
+
+    default
+  end
+
+  alias :hudell_game_event_update :update
+  def update
+    hudell_game_event_update
+  end
+
+  def hitbox_x
+    if @hitbox_x.nil?
+      regex = /hitbox\_x_*=_*(.*)$/
+      @hitbox_x = get_config(regex, 0)
+    end
+
+    @hitbox_x
+  end
+
+  def hitbox_y
+    if @hitbox_y.nil?
+      regex = /hitbox\_y_*=_*(.*)$/
+      @hitbox_y = get_config(regex, 0)
+    end
+
+    @hitbox_y
+  end
+
+  def hitbox_width
+    if @hitbox_width.nil?
+      regex = /hitbox\_width_*=_*(.*)$/
+      @hitbox_width = get_config(regex, 1)
+    end
+
+    @hitbox_width
+  end
+
+  def hitbox_height
+    if @hitbox_height.nil?
+      regex = /hitbox\_height_*=_*(.*)$/
+      @hitbox_height = get_config(regex, 1)
+    end
+
+    @hitbox_height
+  end
+
+
+  
 end
