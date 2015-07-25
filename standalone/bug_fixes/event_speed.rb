@@ -4,6 +4,10 @@
 #------------------------------------------------------------
 #------------------------------------------------------------
 #
+# Script created by Hudell (www.hudell.com)
+# Version: 1.0
+# You're free to use this script on any project
+#
 #
 # English:
 # This script fixes a problem where events configured with the same speed as the player
