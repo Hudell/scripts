@@ -49,8 +49,8 @@ class Spriteset_Map
   def update_current_position_pic
     return unless SceneManager::scene_is?(Scene_Map)
 
-    new_x = $game_player.float_x + OrangeMovement::Hitbox_X_Size
-    new_y = $game_player.float_y + OrangeMovement::Hitbox_Y_Size
+    new_x = $game_player.float_x + $game_player.hitbox_x_size
+    new_y = $game_player.float_y + $game_player.hitbox_y_size
 
     if tile_changed?(new_x, new_y)
       dispose_current_position_pic unless @current_position_pic.nil?
@@ -62,9 +62,8 @@ class Spriteset_Map
   end
 
   def draw_position(new_x, new_y)
-    # size = (OrangeMovement::Step_Size * 32).floor
-    h_size = (OrangeMovement::Hitbox_H_Size * 32).floor
-    v_size = (OrangeMovement::Hitbox_V_Size * 32).floor
+    h_size = ($game_player.hitbox_h_size * 32).floor
+    v_size = ($game_player.hitbox_v_size * 32).floor
     rect = Rect.new(0, 0, h_size, v_size)
 
     @current_position_pic = Sprite.new(@viewport2)
