@@ -5,10 +5,13 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 2.7
+# Version: 2.8
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v2.8: 2015-07-25
+# => Support for dashing sprites
 #
 # v2.7: 2015-07-07
 # => Fixed a problem where fixed routes could move the player into blocked tiles
@@ -87,8 +90,9 @@ module OrangeMovement
   #If this is set to false, fixed move routes won't use pixel movement, moving a whole tile instead 
   Fixed_Move_Route_Use_Pixel_Movement = false
 
-  #If this is true (and Fixed_Move_Route_Use_Pixel_Movement is false), the player will be aligned to the grid on the first step of a fixed move route
-  Fixed_Move_Route_Align_To_Grid = true
+  #There are two cases this setting can affect:
+  # If pixel movement is disabled (either completely disabled or disabled on fixed move routes), when this setting is true, the script will make sure the player is always aligned to the grid.
+  Align_To_Grid = true
 
   #Set this to false if you don't want the player to walk diagonally
   Enable_Diagonal_Movement = true
@@ -223,7 +227,9 @@ module OrangeMovement
   # If set to false, the event will be triggered again after each step
   Block_Repeated_Event_Triggering = true
 
-  # You can also configure a different sprite name/sprite index to use when the player is dashing. To enable this, add those configuration lines on the notes of the actor database:
+  # If true, the script will automatically change the sprite of the hero based on the settings described below
+  Use_Dashing_Sprites = true
+  # Add those configuration lines on the notes of the actor database:
   #
   #       dashing_sprite_name = sprite_name
   #       dashing_sprite_index = 0
@@ -761,21 +767,25 @@ unless OrangeMovement::Enabled == false
       if @move_succeed
         set_direction(d)
 
-        if move_route_forcing && Fixed_Move_Route_Use_Pixel_Movement == false && Fixed_Move_Route_Align_To_Grid == true
-          case d
-          when Direction.left
-            step_size = @x - @x.floor
-          when Direction.right
-            step_size = @x.ceil - @x
-          when Direction.up
-            step_size = @y - @y.floor
-          when Direction.down
-            step_size = @y.ceil - @y
-          else
-            step_size = 0
-          end
+        if Align_To_Grid == true
+          if (move_route_forcing && Fixed_Move_Route_Use_Pixel_Movement == false) || OrangeMovement::Tile_Sections == 1
+            case d
+            when Direction.left
+              step_size = @x - @x.floor
+            when Direction.right
+              step_size = @x.ceil - @x
+            when Direction.up
+              step_size = @y - @y.floor
+            when Direction.down
+              step_size = @y.ceil - @y
+            else
+              step_size = 0
+            end
 
-          step_size = my_step_size if step_size == 0
+            step_size = my_step_size if step_size == 0
+          else
+            step_size = my_step_size
+          end
         else
           step_size = my_step_size
         end
@@ -795,30 +805,32 @@ unless OrangeMovement::Enabled == false
     def module_move_diagonal(horz, vert)
       @move_succeed = diagonal_passable?(@x, @y, horz, vert)
       if @move_succeed
-        if move_route_forcing && Fixed_Move_Route_Use_Pixel_Movement == false && Fixed_Move_Route_Align_To_Grid == true
-          case horz
-          when Direction.left
-            horz_step_size = @x - @x.floor
-          when Direction.right
-            horz_step_size = @x.ceil - @x
-          else
-            horz_step_size = 0
-          end
+        vert_step_size = my_step_size
+        horz_step_size = my_step_size
 
-          case vert
-          when Direction.up
-            vert_step_size = @y - @y.floor
-          when Direction.down
-            vert_step_size = @y.ceil - @y
-          else
-            vert_step_size = 0
-          end
+        if Align_To_Grid == true
+          if (move_route_forcing && Fixed_Move_Route_Use_Pixel_Movement == false) || (OrangeMovement::Tile_Sections == 1)
+            case horz
+            when Direction.left
+              horz_step_size = @x - @x.floor
+            when Direction.right
+              horz_step_size = @x.ceil - @x
+            else
+              horz_step_size = 0
+            end
 
-          horz_step_size = my_step_size if horz_step_size == 0
-          vert_step_size = my_step_size if vert_step_size == 0
-        else
-          vert_step_size = my_step_size
-          horz_step_size = my_step_size
+            case vert
+            when Direction.up
+              vert_step_size = @y - @y.floor
+            when Direction.down
+              vert_step_size = @y.ceil - @y
+            else
+              vert_step_size = 0
+            end
+
+            horz_step_size = my_step_size if horz_step_size == 0
+            vert_step_size = my_step_size if vert_step_size == 0
+          end
         end
 
         @x = $game_map.round_player_x_with_direction(@x, horz, horz_step_size)
@@ -902,24 +914,27 @@ unless OrangeMovement::Enabled == false
 
     alias :hudell_orange_movement_game_player_update :update
     def update
-      @was_moving = false if @was_moving.nil?
+      if OrangeMovement::Use_Dashing_Sprites
+        @was_moving = false if @was_moving.nil?
 
-      #Change actor graphic if they are running or not
-      if dash? && (moving? || @was_moving)
-        new_sprite_name = actor.dashing_sprite_name
-        new_sprite_index = actor.dashing_sprite_index
-      else
-        new_sprite_name = actor.walking_sprite_name
-        new_sprite_index = actor.walking_sprite_index
-      end
-
-      unless new_sprite_name.nil? || new_sprite_index.nil?
-        if new_sprite_name != $game_player.character_name || new_sprite_index != $game_player.character_index
-          $game_map.interpreter.change_actor_graphic(actor.id, new_sprite_name, new_sprite_index, actor.face_name, actor.face_index)
+        #Change actor graphic if they are running or not
+        if dash? && (moving? || @was_moving)
+          new_sprite_name = actor.dashing_sprite_name
+          new_sprite_index = actor.dashing_sprite_index
+        else
+          new_sprite_name = actor.walking_sprite_name
+          new_sprite_index = actor.walking_sprite_index
         end
-      end
 
-      @was_moving = moving?
+        unless new_sprite_name.nil? || new_sprite_index.nil?
+          if new_sprite_name != $game_player.character_name || new_sprite_index != $game_player.character_index
+            $game_map.interpreter.change_actor_graphic(actor.id, new_sprite_name, new_sprite_index, actor.face_name, actor.face_index)
+          end
+        end
+
+        @was_moving = moving?
+      end
+      
       hudell_orange_movement_game_player_update
       
       unless Auto_Jump == false
@@ -1723,72 +1738,4 @@ end
 
 class Game_Event < Game_Character
   attr_reader :erased
-
-  attr_writer :hitbox_x
-  attr_writer :hitbox_y
-  attr_writer :hitbox_width
-  attr_writer :hitbox_height
-
-  def get_config(regex, default)
-    return default if @list.nil?
-
-    @list.each do |command|
-      if command.code == 108 || command.code == 408
-        begin
-          result = command.parameters[0].scan(regex)
-          unless result.nil?
-            value = result[0][0].to_i
-            return value
-          end
-        rescue
-        end
-      end
-    end
-
-    default
-  end
-
-  alias :hudell_game_event_update :update
-  def update
-    hudell_game_event_update
-  end
-
-  def hitbox_x
-    if @hitbox_x.nil?
-      regex = /hitbox\_x_*=_*(.*)$/
-      @hitbox_x = get_config(regex, 0)
-    end
-
-    @hitbox_x
-  end
-
-  def hitbox_y
-    if @hitbox_y.nil?
-      regex = /hitbox\_y_*=_*(.*)$/
-      @hitbox_y = get_config(regex, 0)
-    end
-
-    @hitbox_y
-  end
-
-  def hitbox_width
-    if @hitbox_width.nil?
-      regex = /hitbox\_width_*=_*(.*)$/
-      @hitbox_width = get_config(regex, 1)
-    end
-
-    @hitbox_width
-  end
-
-  def hitbox_height
-    if @hitbox_height.nil?
-      regex = /hitbox\_height_*=_*(.*)$/
-      @hitbox_height = get_config(regex, 1)
-    end
-
-    @hitbox_height
-  end
-
-
-  
 end
