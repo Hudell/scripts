@@ -18,13 +18,13 @@
 # não andavam realmente na mesma velocidade
 
 class Game_Event < Game_Character
-  alias :hudell_event_movement_delay_fix_stop_count_threshold :stop_count_threshold
   #
   # Return the default stop_count_threshold less 1, because "update_self_movement" uses ">" instead of ">="
   # Changing it here instead of update_self_movement is better for compatibility.
   #
   # Retorna o valor padrão de stop_count_threshold menos 1, porque o método "update_self_movement" usa ">" ao invés de ">="
   # Mudar aqui ao invés de mudar no update_self_movement é melhor para compatibilidade
+  alias :hudell_event_movement_delay_fix_stop_count_threshold :stop_count_threshold
   def stop_count_threshold
     hudell_event_movement_delay_fix_stop_count_threshold - 1
   end
