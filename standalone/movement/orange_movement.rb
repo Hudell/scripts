@@ -5,7 +5,7 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 2.8
+# Version: 2.8.1
 # You're free to use this script on any project
 #
 # Change Log:
@@ -243,7 +243,6 @@ module OrangeMovement
   #       $game_player.actor.walking_sprite_name = 'sprite_name'
   #       $game_player.actor.walking_sprite_index = 0
   #
-
   #------------------------------------------------------------
   #------------------------------------------------------------
   #---------------  DON'T EDIT AFTER THIS LINE  ---------------
@@ -910,6 +909,29 @@ unless OrangeMovement::Enabled == false
       else
         Step_Size
       end
+    end
+
+    def touching_region?(region_id)
+      min_x, min_y, max_x, max_y = position_data
+
+      max_x = max_x.floor
+      max_y = max_y.floor
+      min_x = min_x.floor
+      min_y = min_y.floor
+
+      for x in min_x..max_x
+        for y in min_y..max_y
+          if region_id.is_a? Array
+            region_id.each do |id|
+              return true if $game_map.region_id(x, y) == id
+            end
+          else
+            return true if $game_map.region_id(x, y) == region_id
+          end
+        end
+      end
+
+      false
     end
 
     alias :hudell_orange_movement_game_player_update :update
