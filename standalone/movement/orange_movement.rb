@@ -5,7 +5,7 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 2.8.1
+# Version: 2.8.2
 # You're free to use this script on any project
 #
 # Change Log:
@@ -911,16 +911,9 @@ unless OrangeMovement::Enabled == false
       end
     end
 
-    def touching_region?(region_id)
-      min_x, min_y, max_x, max_y = position_data
-
-      max_x = max_x.floor
-      max_y = max_y.floor
-      min_x = min_x.floor
-      min_y = min_y.floor
-
-      for x in min_x..max_x
-        for y in min_y..max_y
+    def region_inside_rect?(left, right, top, down, region_id)
+      for x in (left.floor)..(right.floor)
+        for y in (top.floor)..(down.floor)
           if region_id.is_a? Array
             region_id.each do |id|
               return true if $game_map.region_id(x, y) == id
@@ -932,6 +925,17 @@ unless OrangeMovement::Enabled == false
       end
 
       false
+    end
+
+    def feet_touching_region?(region_id)
+      min_x, min_y, max_x, max_y = position_data
+      #Checks only the max_y
+      region_inside_rect?(min_x, max_x, max_y, max_y, region_id)
+    end
+
+    def touching_region?(region_id)
+      min_x, min_y, max_x, max_y = position_data
+      region_inside_rect?(min_x, max_x, min_y, max_y, region_id)
     end
 
     alias :hudell_orange_movement_game_player_update :update
