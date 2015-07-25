@@ -18,10 +18,10 @@ class Game_Player < Game_Character
       power.times do
         OrangeMovement::Tile_Sections.times do
           case d 
-             when 2; @y += OrangeMovement::Step_Size if passable?(@x, @y, d)
-             when 4; @x -= OrangeMovement::Step_Size if passable?(@x, @y, d)
-             when 6; @x += OrangeMovement::Step_Size if passable?(@x, @y, d)
-             when 8; @y -= OrangeMovement::Step_Size if passable?(@x, @y, d)
+             when 2; @y += my_step_size if passable?(@x, @y, d)
+             when 4; @x -= my_step_size if passable?(@x, @y, d)
+             when 6; @x += my_step_size if passable?(@x, @y, d)
+             when 8; @y -= my_step_size if passable?(@x, @y, d)
           end
         end
       end
