@@ -966,9 +966,6 @@ unless OrangeMovement::Enabled == false
         @was_moving = moving?
       end
       
-      diff = @x - @real_x
-      p diff if diff > 0
-
       last_real_x = @real_x
       last_real_y = @real_y
       last_moving = moving?
