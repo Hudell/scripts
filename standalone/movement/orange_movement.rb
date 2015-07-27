@@ -5,10 +5,13 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 2.8.2
+# Version: 2.9
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v2.9: 2015-07-26
+# => Fixed a problem where touch events wouldn't trigger when dashing if Tile_Sections was set to 8
 #
 # v2.8: 2015-07-25
 # => Support for dashing sprites
@@ -940,6 +943,8 @@ unless OrangeMovement::Enabled == false
 
     alias :hudell_orange_movement_game_player_update :update
     def update
+      @moved_last_frame = false if @moved_last_frame.nil?
+
       if OrangeMovement::Use_Dashing_Sprites
         @was_moving = false if @was_moving.nil?
 
@@ -961,7 +966,25 @@ unless OrangeMovement::Enabled == false
         @was_moving = moving?
       end
       
+      diff = @x - @real_x
+      p diff if diff > 0
+
+      last_real_x = @real_x
+      last_real_y = @real_y
+      last_moving = moving?
+
       hudell_orange_movement_game_player_update
+
+      moved = @real_y != last_real_y || @real_x != last_real_x
+      
+      #Edge case: the player moved to the destination so fast that the Game_Player class thought he didn't move at all
+      #This happens when dashing with Tile_Sections = 8
+      if moved && !moving? && !last_moving
+        $game_party.on_player_walk
+        check_touch_event
+      end
+
+      @moved_last_frame = moved
       
       unless Auto_Jump == false
         if enabled?
