@@ -5,16 +5,19 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 2.9
+# Version: 3.0
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v3.0: 2015-07-28
+# => Added Hitboxes for Events
 #
 # v2.9: 2015-07-26
 # => Fixed a problem where touch events wouldn't trigger when dashing if Tile_Sections was set to 8
 #
 # v2.8: 2015-07-25
-# => Support for dashing sprites
+# => Changed support for dashing sprites
 #
 # v2.7: 2015-07-07
 # => Fixed a problem where fixed routes could move the player into blocked tiles
@@ -27,7 +30,7 @@
 # => Support for a different hitbox for each actor
 #
 # v2.4: 2015-06-11
-# => Added a new option to ignore empty events when choosing what event to trigger
+# => Added a new option to ignore empty events when choosing which event to trigger
 # => If somehow the player is on the same tile as an unpassable event, they will now be able to leave that tile
 # => Fixed a small problem where events would turn to the wrong direction when activated
 #
@@ -136,7 +139,7 @@ module OrangeMovement
   # If set to false, the feature won't even be loaded on rpg maker, to avoid possible script conflicts.
   # If set to true, the feature will always be available
   # If set to an integer value, the script will look for a switch with that ID to decide if the feature is enabled or not
-  Auto_Jump = false
+  Auto_Jump = 0
 
   #Auto_Jump_Only_When_Dashing
   #If this is set to true, the auto jump will only be available when the player is dashing
@@ -230,6 +233,9 @@ module OrangeMovement
   # If set to false, the event will be triggered again after each step
   Block_Repeated_Event_Triggering = true
 
+  # If true, all features will be added to the events too
+  Use_Event_Hitboxes = true
+
   # If true, the script will automatically change the sprite of the hero based on the settings described below
   Use_Dashing_Sprites = true
   # Add those configuration lines on the notes of the actor database:
@@ -290,6 +296,119 @@ module Direction
   def self.down_right; 3; end
 end
 
+class Game_Actor < Game_Battler
+  include OrangeMovement
+  
+  def hitbox_x
+    begin
+      @hitbox_x = actor.note.scan(/hitbox\_x_*=_*(\-?[0-9]+)/)[0][0].to_i if @hitbox_x.nil?
+    rescue
+      @hitbox_x = Player_Hitbox_X_Offset
+    end
+
+    @hitbox_x
+  end
+
+  def hitbox_y
+    begin
+      @hitbox_y = actor.note.scan(/hitbox\_y_*=_*(\-?[0-9]+)/)[0][0].to_i if @hitbox_y.nil?
+    rescue
+      @hitbox_y = Player_Hitbox_Y_Offset
+    end
+
+    @hitbox_y
+  end
+
+  def hitbox_w
+    begin
+      @hitbox_w = actor.note.scan(/hitbox\_w_*=_*(\-?[0-9]+)/)[0][0].to_i if @hitbox_w.nil?
+    rescue
+      @hitbox_w = Player_Hitbox_Width
+    end
+
+    @hitbox_w
+  end
+
+  def hitbox_h
+    begin
+      @hitbox_h = actor.note.scan(/hitbox\_h_*=_*(\-?[0-9]+)/)[0][0].to_i if @hitbox_h.nil?
+    rescue
+      @hitbox_h = Player_Hitbox_Height
+    end
+
+    @hitbox_h
+  end
+
+  def hitbox_x_size
+    hitbox_x / 32.0
+  end
+
+  def hitbox_y_size
+    hitbox_y / 32.0
+  end
+
+  def hitbox_h_size
+    hitbox_w / 32.0
+  end
+
+  def hitbox_v_size
+    hitbox_h / 32.0
+  end
+
+  def dashing_sprite_name
+    begin
+      @dashing_sprite_name = actor.note.scan(/dashing\_sprite\_name_*=_*(.*)$/)[0][0].strip if @dashing_sprite_name.nil?
+    rescue
+    end
+
+    @dashing_sprite_name
+  end
+
+  def dashing_sprite_index
+    begin
+      @dashing_sprite_index = actor.note.scan(/dashing\_sprite\_index_*=_*(.*)$/)[0][0].to_i if @dashing_sprite_index.nil?
+    rescue
+    end
+
+    @dashing_sprite_index
+  end
+
+  def dashing_sprite_name=(value)
+    @dashing_sprite_name = value
+  end
+
+  def dashing_sprite_index=(value)
+    @dashing_sprite_index = value
+  end
+
+  def walking_sprite_name
+    begin
+      @walking_sprite_name = actor.note.scan(/walking\_sprite\_name_*=_*(.*)$/)[0][0].strip if @walking_sprite_name.nil?
+    rescue
+    end
+
+    @walking_sprite_name
+  end
+
+  def walking_sprite_index
+    begin
+      @walking_sprite_index = actor.note.scan(/walking\_sprite\_index_*=_*(.*)$/)[0][0].to_i if @walking_sprite_index.nil?
+    rescue
+    end
+
+    @walking_sprite_index
+  end
+
+  def walking_sprite_name=(value)
+    @walking_sprite_name = value
+  end
+
+  def walking_sprite_index=(value)
+    @walking_sprite_index = value
+  end
+end
+
+
 unless OrangeMovement::Enabled == false
   class Game_Map
     include OrangeMovement
@@ -324,9 +443,6 @@ unless OrangeMovement::Enabled == false
 
     def player_x_with_direction(x, d, step_size = Step_Size)
       if enabled?
-        # if $game_player.move_route_forcing
-        #   step_size = 1
-        # end
         if direction_goes_left?(d)
           return x - step_size
         elsif direction_goes_right?(d)
@@ -341,10 +457,6 @@ unless OrangeMovement::Enabled == false
 
     def player_y_with_direction(y, d, step_size = Step_Size)
       if enabled?
-        # if $game_player.move_route_forcing
-        #   step_size = 1
-        # end
-
         if direction_goes_down?(d)
           return y + step_size
         elsif direction_goes_up?(d)
@@ -382,11 +494,45 @@ unless OrangeMovement::Enabled == false
     end
   end
 
+  module Orange_ActorCharacter
+    def hitbox_x_size
+      if actor.nil?
+        0
+      else
+        actor.hitbox_x_size
+      end
+    end
+
+    def hitbox_y_size
+      if actor.nil?
+        0
+      else
+        actor.hitbox_y_size
+      end
+    end
+
+    def hitbox_v_size
+      if actor.nil?
+        1
+      else
+        actor.hitbox_v_size
+      end
+    end
+
+    def hitbox_h_size
+      if actor.nil?
+        1
+      else
+        actor.hitbox_h_size
+      end
+    end
+  end
+
   module Orange_Character
     include OrangeMovement
     def tile_x
       diff = @x - @x.floor
-      if diff < 5
+      if diff < 0.5
         return @x.floor
       else
         return @x.ceil
@@ -395,7 +541,7 @@ unless OrangeMovement::Enabled == false
 
     def tile_y
       diff = @y - @y.floor
-      if diff < 5
+      if diff < 0.5
         return @y.floor
       else
         return @y.ceil
@@ -418,24 +564,57 @@ unless OrangeMovement::Enabled == false
       @x + hitbox_x_size
     end
 
+    def hitbox_bottom
+      hitbox_y + hitbox_h_size
+    end
+
+    def position_data
+      the_x = @x + hitbox_x_size
+      the_y = @y + hitbox_y_size
+      width = hitbox_h_size.to_f - 0.01
+      height = hitbox_v_size.to_f - 0.01
+
+      return the_x, the_y, the_x + width, the_y + height
+    end
+
+    def is_touching_tile?(tile_x, tile_y)
+      the_x, the_y, width, height = position_data
+
+      return false unless tile_x >= the_x.floor && tile_x <= width.floor
+      return false unless tile_y >= the_y.floor && tile_y <= height.floor
+      return true
+    end
+
     def hitbox_x_size
-      actor.hitbox_x_size
+      0
     end
 
     def hitbox_y_size
-      actor.hitbox_y_size
+      0
     end
 
     def hitbox_v_size
-      actor.hitbox_v_size
+      1
     end
 
     def hitbox_h_size
-      actor.hitbox_h_size
+      1
     end
 
-    def hitbox_bottom
-      hitbox_y + hitbox_h_size
+    def left_x
+      hitbox_x
+    end
+
+    def right_x
+      hitbox_x + hitbox_h_size
+    end
+
+    def top_y
+      hitbox_y
+    end
+
+    def bottom_y
+      hitbox_y + hitbox_v_size
     end
 
     def front_x
@@ -552,19 +731,14 @@ unless OrangeMovement::Enabled == false
 
     def collide_with_events?(x, y)
       run_for_all_positions(x, y) do |block_x, block_y|
-
-        if self == $game_player
-          $game_map.events_xy_nt(block_x, block_y).any? do |event|
-            #If the player is "inside" it, then this event won't be considered,
-            #because if it did, the player would be locked on it
-            if $game_player.is_touching_tile?(block_x, block_y)
-              false
-            else
-              event.normal_priority?
-            end
+        $game_map.events_xy_nt(block_x, block_y).any? do |event|
+          #If the player is "inside" it, then this event won't be considered,
+          #because if it did, the player would be locked on it
+          if is_touching_tile?(block_x, block_y)
+            false
+          else
+            event.normal_priority? || self.is_a?(Game_Event)
           end
-        else
-          super(block_x, block_y)
         end
       end
     end
@@ -849,6 +1023,7 @@ unless OrangeMovement::Enabled == false
   class Game_Follower < Game_Character
     include OrangeMovement
     include Orange_Character
+    # include Orange_ActorCharacter
 
     alias :hudell_orange_movement_game_follower_map_passable? :map_passable?
     def map_passable?(x, y, d)
@@ -905,6 +1080,7 @@ unless OrangeMovement::Enabled == false
   class Game_Player < Game_Character
     include OrangeMovement
     include Orange_Character
+    include Orange_ActorCharacter
 
     def my_step_size
       if move_route_forcing && Fixed_Move_Route_Use_Pixel_Movement == false
@@ -1032,23 +1208,6 @@ unless OrangeMovement::Enabled == false
           orange_movement_game_player_start_map_event(block_x, block_y, triggers, normal)
         end
       end
-    end
-
-    def position_data
-      the_x = @x + hitbox_x_size
-      the_y = @y + hitbox_y_size
-      width = hitbox_h_size.to_f - 0.01
-      height = hitbox_v_size.to_f - 0.01
-
-      return the_x, the_y, the_x + width, the_y + height
-    end
-
-    def is_touching_tile?(tile_x, tile_y)
-      the_x, the_y, width, height = position_data
-
-      return false unless tile_x >= the_x.floor && tile_x <= width.floor
-      return false unless tile_y >= the_y.floor && tile_y <= height.floor
-      return true
     end
 
     def event_has_anything_to_run?(event)
@@ -1198,7 +1357,7 @@ unless OrangeMovement::Enabled == false
       end
 
       def call_jump(d)
-        if Auto_Jump == true || (Auto_Jump.is_a?(Fixnum) && $game_switches[Auto_Jump])
+        if Auto_Jump == true || (Auto_Jump.is_a?(Fixnum) && Auto_Jump > 0 && $game_switches[Auto_Jump])
           if !Auto_Jump_Only_When_Dashing || dash?
             if !Auto_Jump_Only_When_Alone || $game_party.members.length == 1
               return true if try_to_jump(d)
@@ -1670,118 +1829,74 @@ class Game_Character < Game_CharacterBase
   end
 end
 
-class Game_Actor < Game_Battler
-  include OrangeMovement
-  
-  def hitbox_x
-    begin
-      @hitbox_x = actor.note.scan(/hitbox\_x_*=_*(\-?[0-9]+)/)[0][0].to_i if @hitbox_x.nil?
-    rescue
-      @hitbox_x = Player_Hitbox_X_Offset
-    end
-
-    @hitbox_x
-  end
-
-  def hitbox_y
-    begin
-      @hitbox_y = actor.note.scan(/hitbox\_y_*=_*(\-?[0-9]+)/)[0][0].to_i if @hitbox_y.nil?
-    rescue
-      @hitbox_y = Player_Hitbox_Y_Offset
-    end
-
-    @hitbox_y
-  end
-
-  def hitbox_w
-    begin
-      @hitbox_w = actor.note.scan(/hitbox\_w_*=_*(\-?[0-9]+)/)[0][0].to_i if @hitbox_w.nil?
-    rescue
-      @hitbox_w = Player_Hitbox_Width
-    end
-
-    @hitbox_w
-  end
-
-  def hitbox_h
-    begin
-      @hitbox_h = actor.note.scan(/hitbox\_h_*=_*(\-?[0-9]+)/)[0][0].to_i if @hitbox_h.nil?
-    rescue
-      @hitbox_h = Player_Hitbox_Height
-    end
-
-    @hitbox_h
-  end
-
-  def hitbox_x_size
-    hitbox_x / 32.0
-  end
-
-  def hitbox_y_size
-    hitbox_y / 32.0
-  end
-
-  def hitbox_h_size
-    hitbox_w / 32.0
-  end
-
-  def hitbox_v_size
-    hitbox_h / 32.0
-  end
-
-  def dashing_sprite_name
-    begin
-      @dashing_sprite_name = actor.note.scan(/dashing\_sprite\_name_*=_*(.*)$/)[0][0].strip if @dashing_sprite_name.nil?
-    rescue
-    end
-
-    @dashing_sprite_name
-  end
-
-  def dashing_sprite_index
-    begin
-      @dashing_sprite_index = actor.note.scan(/dashing\_sprite\_index_*=_*(.*)$/)[0][0].to_i if @dashing_sprite_index.nil?
-    rescue
-    end
-
-    @dashing_sprite_index
-  end
-
-  def dashing_sprite_name=(value)
-    @dashing_sprite_name = value
-  end
-
-  def dashing_sprite_index=(value)
-    @dashing_sprite_index = value
-  end
-
-  def walking_sprite_name
-    begin
-      @walking_sprite_name = actor.note.scan(/walking\_sprite\_name_*=_*(.*)$/)[0][0].strip if @walking_sprite_name.nil?
-    rescue
-    end
-
-    @walking_sprite_name
-  end
-
-  def walking_sprite_index
-    begin
-      @walking_sprite_index = actor.note.scan(/walking\_sprite\_index_*=_*(.*)$/)[0][0].to_i if @walking_sprite_index.nil?
-    rescue
-    end
-
-    @walking_sprite_index
-  end
-
-  def walking_sprite_name=(value)
-    @walking_sprite_name = value
-  end
-
-  def walking_sprite_index=(value)
-    @walking_sprite_index = value
-  end
-end
-
 class Game_Event < Game_Character
   attr_reader :erased
+  
+  if OrangeMovement::Use_Event_Hitboxes == true
+    include OrangeMovement
+
+    def get_config(regex, default)
+      return default if @list.nil?
+
+      @list.each do |command|
+        if command.code == 108 || command.code == 408
+          begin
+            result = command.parameters[0].scan(regex)
+            unless result.nil?
+              value = result[0][0].to_i
+              return value
+            end
+          rescue
+          end
+        end
+      end
+
+      default
+    end
+
+    def hitbox_x_size
+      if @hitbox_x_size.nil?
+        regex = /hitbox\_x_*=_*(.*)$/
+        @hitbox_x_size = get_config(regex, 0)
+      end
+
+      @hitbox_x_size
+    end
+
+    def hitbox_y_size
+      if @hitbox_y_size.nil?
+        regex = /hitbox\_y_*=_*(.*)$/
+        @hitbox_y_size = get_config(regex, 0)
+      end
+
+      @hitbox_y_size
+    end
+
+    def hitbox_h_size
+      if @hitbox_h_size.nil?
+        regex = /hitbox\_width_*=_*(.*)$/
+        @hitbox_h_size = get_config(regex, 1)
+      end
+
+      @hitbox_h_size
+    end
+
+    def hitbox_v_size
+      if @hitbox_v_size.nil?
+        regex = /hitbox\_height_*=_*(.*)$/
+        @hitbox_v_size = get_config(regex, 1)
+      end
+
+      @hitbox_v_size
+    end
+
+    def pos?(x, y)
+      left_x = @x + hitbox_x_size
+      right_x = left_x + hitbox_h_size
+      top_y = @y + hitbox_y_size
+      bottom_y = top_y + hitbox_v_size
+
+      x >= left_x && x < right_x && y >= top_y && y < bottom_y
+    end
+  end
 end
