@@ -1928,7 +1928,7 @@ class Game_Event < Game_Character
       end
     end
 
-    #This methos is made to ensure compatibility with effectus. It won't do anything if Effectus isn't loaded.
+    #This method is made to ensure compatibility with effectus. It won't do anything if Effectus isn't loaded.
     alias :hudell_orange_movement_event_hitboxes_game_event_refresh :refresh
     def refresh
       hudell_orange_movement_event_hitboxes_game_event_refresh
