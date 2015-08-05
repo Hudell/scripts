@@ -5,7 +5,7 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 3.0
+# Version: 3.0.1
 # You're free to use this script on any project
 #
 # Change Log:
@@ -233,7 +233,7 @@ module OrangeMovement
   # If set to false, the event will be triggered again after each step
   Block_Repeated_Event_Triggering = true
 
-  # If true, all features will be added to the events too
+  # If true, custom event hitboxes will be enabled
   Use_Event_Hitboxes = true
 
   # If true, the script will automatically change the sprite of the hero based on the settings described below
@@ -1890,13 +1890,65 @@ class Game_Event < Game_Character
       @hitbox_v_size
     end
 
-    def pos?(x, y)
-      left_x = @x + hitbox_x_size
-      right_x = left_x + hitbox_h_size
-      top_y = @y + hitbox_y_size
-      bottom_y = top_y + hitbox_v_size
+    def uses_default_hitbox?
+      return false unless @hitbox_x_size == 0
+      return false unless @hitbox_y_size == 0
+      return false unless @hitbox_h_size == 1
+      return false unless @hitbox_v_size == 1
+      true
+    end
 
-      x >= left_x && x < right_x && y >= top_y && y < bottom_y
+    def left_x
+      @x + hitbox_x_size
+    end
+
+    def right_x
+      left_x + hitbox_h_size
+    end
+
+    def top_y
+      @y + hitbox_y_size
+    end
+
+    def bottom_y
+      top_y + hitbox_v_size
+    end
+
+    alias :hudell_orange_movement_event_hitboxes_pos? :pos?
+    def pos?(x, y)
+      if uses_default_hitbox?
+        hudell_orange_movement_event_hitboxes_pos?(x, y)
+      else
+        left_x = @x + hitbox_x_size
+        right_x = left_x + hitbox_h_size
+        top_y = @y + hitbox_y_size
+        bottom_y = top_y + hitbox_v_size
+
+        x >= left_x && x < right_x && y >= top_y && y < bottom_y
+      end
+    end
+
+    #This methos is made to ensure compatibility with effectus. It won't do anything if Effectus isn't loaded.
+    alias :hudell_orange_movement_event_hitboxes_game_event_refresh :refresh
+    def refresh
+      hudell_orange_movement_event_hitboxes_game_event_refresh
+
+      unless uses_default_hitbox?
+        if @ms_effectus_position_registered
+          unless @hudell_ms_effectus_position_registered
+            @ms_effectus_position_registered = false
+            $game_map.ms_effectus_event_pos[@y * $game_map.width + @x].delete(self)
+
+            for x in (left_x.floor)..(right_x.ceil - 1)
+              for y in (top_y.floor)..(bottom_y.ceil - 1)
+                $game_map.ms_effectus_event_pos[y * $game_map.width + x] << self
+              end
+            end
+            
+            @hudell_ms_effectus_position_registered = true
+          end
+        end
+      end
     end
   end
 end
