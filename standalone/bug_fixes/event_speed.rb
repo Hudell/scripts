@@ -37,13 +37,17 @@ class Game_Event < Game_Character
     hudell_event_movement_delay_fix_update_self_movement
     update_move if moving?
   end
+end
 
-  #
+
+class Game_Character < Game_CharacterBase
   # Adds "update_move" at the end of the update_routine_move method, to make sure the event start moving in the same frame
   # Also keeps @wait_count with zero if the event is using a high frequency
+  # This can also affect the player
   #
   # Adiciona "update_move" no final do método update_routine_move, para garantir que o evento comece a se mover no mesmo frame
   # Também mantém @wait_count com valor zero se o evento está usando uma frequência alta
+  # Isto também afeta o jogador.
   alias :hudell_event_movement_delay_fix_update_routine_move :update_routine_move
   def update_routine_move
     @wait_count = 0 if @move_frequency == 5
