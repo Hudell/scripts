@@ -5,7 +5,7 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 3.0.2
+# Version: 3.0.3
 # You're free to use this script on any project
 #
 # Change Log:
@@ -1954,12 +1954,14 @@ class Game_Event < Game_Character
     def setup_page(new_page)
       hudell_orange_movement_game_event_setup_page(new_page)
 
-      for x in (left_x.floor)..(right_x.ceil - 1)
-        for y in (top_y.floor)..(bottom_y.ceil - 1)
-          $game_map.ms_effectus_event_pos[y * $game_map.width + x].delete(self)
+      if @hudell_ms_effectus_position_registered
+        for x in (left_x.floor)..(right_x.ceil - 1)
+          for y in (top_y.floor)..(bottom_y.ceil - 1)
+            $game_map.ms_effectus_event_pos[y * $game_map.width + x].delete(self)
+          end
         end
+        @hudell_ms_effectus_position_registered = false
       end
-      @hudell_ms_effectus_position_registered = false
 
       @hitbox_x_size = nil
       @hitbox_y_size = nil
