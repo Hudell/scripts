@@ -5,10 +5,13 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 1.0
+# Version: 1.1
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v1.1 - 2015-08-06
+# => Changed the script to reload hitbox data when the event page is changed
 #
 # v1.0 - 2015-07-25
 # => Created the script
@@ -116,5 +119,15 @@ class Game_Event < Game_Character
 
   def pos?(x, y)
     x >= left_x && x < right_x && y >= top_y && y < bottom_y
+  end
+
+  alias :hudell_event_sizes_game_event_setup_page :setup_page
+  def setup_page(new_page)
+    hudell_event_sizes_game_event_setup_page(new_page)
+
+    @hitbox_x = nil
+    @hitbox_y = nil
+    @hitbox_height = nil
+    @hitbox_width = nil
   end
 end
