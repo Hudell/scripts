@@ -5,10 +5,13 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 3.0.4
+# Version: 3.1
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v3.1: 2015-08-08
+# => Added "Dashing_Sprites_Reset_On_Teleport" setting
 #
 # v3.0: 2015-07-28
 # => Added Hitboxes for Events
@@ -238,6 +241,10 @@ module OrangeMovement
 
   # If true, the script will automatically change the sprite of the hero based on the settings described below
   Use_Dashing_Sprites = true
+
+  # If true, the script will change the player's sprite to the regular "walking sprite" when entering a house
+  Dashing_Sprites_Reset_On_Teleport = true
+
   # Add those configuration lines on the notes of the actor database:
   #
   #       dashing_sprite_name = sprite_name
@@ -1117,10 +1124,7 @@ unless OrangeMovement::Enabled == false
       region_inside_rect?(min_x, max_x, min_y, max_y, region_id)
     end
 
-    alias :hudell_orange_movement_game_player_update :update
-    def update
-      @moved_last_frame = false if @moved_last_frame.nil?
-
+    def update_actor_graphic
       if OrangeMovement::Use_Dashing_Sprites
         @was_moving = false if @was_moving.nil?
 
@@ -1142,8 +1146,15 @@ unless OrangeMovement::Enabled == false
         end
 
         @was_moving = moving?
-      end
-      
+      end      
+    end
+
+    alias :hudell_orange_movement_game_player_update :update
+    def update
+      @moved_last_frame = false if @moved_last_frame.nil?
+
+      update_actor_graphic
+
       last_real_x = @real_x
       last_real_y = @real_y
       last_moving = moving?
@@ -1778,8 +1789,15 @@ unless OrangeMovement::Enabled == false
   end
 end
 
-if OrangeMovement::Block_Repeated_Event_Triggering == true
-  class Game_Interpreter
+
+class Game_Interpreter
+  #Use command 322 to change it, this is done to keep compatibility with effectus
+  def change_actor_graphic(actor_id, sprite_name, sprite_index, face_name, face_index)
+    @params = [actor_id, sprite_name, sprite_index, face_name, face_index]
+    command_322
+  end
+
+  if OrangeMovement::Block_Repeated_Event_Triggering == true
     alias :hudell_orange_movement_game_interpreter_command_201 :command_201
     def command_201
       hudell_orange_movement_game_interpreter_command_201
@@ -1789,13 +1807,13 @@ if OrangeMovement::Block_Repeated_Event_Triggering == true
       $game_player.mark_tile_as_checked($game_player.x, $game_player.y) if OrangeMovement::Ignore_Teleported_Tile
     end
   end
-end
 
-class Game_Interpreter
-  #Use command 322 to change it, this is done to keep compatibility with effectus
-  def change_actor_graphic(actor_id, sprite_name, sprite_index, face_name, face_index)
-    @params = [actor_id, sprite_name, sprite_index, face_name, face_index]
-    command_322
+  if OrangeMovement::Dashing_Sprites_Reset_On_Teleport == true
+    alias :hudell_orange_movement_game_interpreter_command_201_B :command_201
+    def command_201
+      $game_player.update_actor_graphic
+      hudell_orange_movement_game_interpreter_command_201_B
+    end
   end
 end
 
