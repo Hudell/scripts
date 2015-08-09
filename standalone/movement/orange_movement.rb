@@ -5,7 +5,7 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 3.0.3
+# Version: 3.0.4
 # You're free to use this script on any project
 #
 # Change Log:
@@ -1124,18 +1124,20 @@ unless OrangeMovement::Enabled == false
       if OrangeMovement::Use_Dashing_Sprites
         @was_moving = false if @was_moving.nil?
 
-        #Change actor graphic if they are running or not
-        if dash? && (moving? || @was_moving)
-          new_sprite_name = actor.dashing_sprite_name
-          new_sprite_index = actor.dashing_sprite_index
-        else
-          new_sprite_name = actor.walking_sprite_name
-          new_sprite_index = actor.walking_sprite_index
-        end
+        if actor
+          #Change actor graphic if they are running or not
+          if dash? && (moving? || @was_moving)
+            new_sprite_name = actor.dashing_sprite_name
+            new_sprite_index = actor.dashing_sprite_index
+          else
+            new_sprite_name = actor.walking_sprite_name
+            new_sprite_index = actor.walking_sprite_index
+          end
 
-        unless new_sprite_name.nil? || new_sprite_index.nil?
-          if new_sprite_name != $game_player.character_name || new_sprite_index != $game_player.character_index
-            $game_map.interpreter.change_actor_graphic(actor.id, new_sprite_name, new_sprite_index, actor.face_name, actor.face_index)
+          unless new_sprite_name.nil? || new_sprite_index.nil?
+            if new_sprite_name != $game_player.character_name || new_sprite_index != $game_player.character_index
+              $game_map.interpreter.change_actor_graphic(actor.id, new_sprite_name, new_sprite_index, actor.face_name, actor.face_index)
+            end
           end
         end
 
