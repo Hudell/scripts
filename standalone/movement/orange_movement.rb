@@ -5,10 +5,13 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 3.1
+# Version: 3.2
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v3.2: 2015-08-21
+# => Improvements on diagonal movement
 #
 # v3.1: 2015-08-08
 # => Added "Dashing_Sprites_Reset_On_Teleport" setting
@@ -1291,7 +1294,23 @@ unless OrangeMovement::Enabled == false
         button = :DOWN
         
         d = Input.dir4
+        diagonal_d = Input.dir8
+        alternative_d = d
         return false unless input_direction_enabled?(d)
+
+        #If the player is trying to move diagonally and the non-diagonal direction is unavailable, try the other non-diagonal direction
+        if d != diagonal_d
+          case diagonal_d
+          when Direction.up_left
+            alternative_d = d == Direction.up ? Direction.left : Direction.up
+          when Direction.up_right
+            alternative_d = d == Direction.up ? Direction.right : Direction.up
+          when Direction.down_left
+            alternative_d = d == Direction.down ? Direction.left : Direction.down
+          when Direction.down_right
+            alternative_d = d == Direction.down ? Direction.right : Direction.down
+          end
+        end
 
         case d
           when 2; button = :DOWN
@@ -1302,12 +1321,15 @@ unless OrangeMovement::Enabled == false
 
         clear_checked_tiles
 
-        if passable?(@x, @y, d)
+        if passable?(@x, @y, d) || passable?(@x, @y, alternative_d)
+          #Try the diagonal movement first
           unless OrangeMovement::Enable_Diagonal_Movement == false
-            d = Input.dir8
+            do_movement(diagonal_d)
+            return if @move_succeed
           end
 
           do_movement(d)
+          do_movement(alternative_d) unless @move_succeed
         else
           tileset_passable = tileset_passable?(@x, @y, d)
           should_try_jumping = true
