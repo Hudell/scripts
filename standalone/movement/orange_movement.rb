@@ -123,7 +123,7 @@ module OrangeMovement
   #How many frames to wait before executing the auto-avoid diagonally
   Auto_Avoid_Diagonally_Delay = 0
   #How many frames to wait before executing the auto-avoid by offset
-  Auto_Avoid_Offset_Delay = 10
+  Auto_Avoid_Offset_Delay = 0
 
   #How many tiles the player can walk on a different direction to automatically avoid a blocked tile
   #Values smaller than the step size won't have any effect
