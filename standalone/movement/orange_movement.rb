@@ -5,10 +5,13 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 3.2
+# Version: 3.3
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v3.3: 2015-09-08
+# => Added Auto_Avoid_Diagonally_Delay and Auto_Avoid_Offset_Delay settings
 #
 # v3.2: 2015-08-21
 # => Improvements on diagonal movement
@@ -116,6 +119,11 @@ module OrangeMovement
   Auto_Avoid_Diagonally = true
   #If this is set to false, the script won't try to avoid an obstacle by walking in a different direction
   Auto_Avoid_Walking_Around = true
+
+  #How many frames to wait before executing the auto-avoid diagonally
+  Auto_Avoid_Diagonally_Delay = 0
+  #How many frames to wait before executing the auto-avoid by offset
+  Auto_Avoid_Offset_Delay = 10
 
   #How many tiles the player can walk on a different direction to automatically avoid a blocked tile
   #Values smaller than the step size won't have any effect
@@ -1291,6 +1299,9 @@ unless OrangeMovement::Enabled == false
         return orange_movement_game_player_move_by_input unless enabled?
         return if !movable? || $game_map.interpreter.running?
 
+        @avoid_diagonally_delay = 0 if @avoid_diagonally_delay.nil?
+        @avoid_offset_delay = 0 if @avoid_offset_delay.nil?
+
         button = :DOWN
         
         d = Input.dir4
@@ -1322,6 +1333,10 @@ unless OrangeMovement::Enabled == false
         clear_checked_tiles
 
         if passable?(@x, @y, d) || passable?(@x, @y, alternative_d)
+          #Restart the delay
+          @avoid_diagonally_delay = Auto_Avoid_Diagonally_Delay
+          @avoid_offset_delay = Auto_Avoid_Offset_Delay
+
           #Try the diagonal movement first
           unless OrangeMovement::Enable_Diagonal_Movement == false
             do_movement(diagonal_d)
@@ -1369,6 +1384,7 @@ unless OrangeMovement::Enabled == false
             should_try_jumping = false
           end
 
+
           if should_try_avoiding_diagonally
             if try_to_avoid(d)
               should_try_jumping = false
@@ -1388,6 +1404,9 @@ unless OrangeMovement::Enabled == false
             set_direction(d)
             check_event_trigger_touch_front
           end
+
+          @avoid_diagonally_delay -= 1 if @avoid_diagonally_delay > 0
+          @avoid_offset_delay -= 1 if @avoid_offset_delay > 0
         end
       end
 
@@ -1404,8 +1423,6 @@ unless OrangeMovement::Enabled == false
       end
 
       def do_movement(d)
-        @avoid_delay = nil
-
         case d 
           when 2, 4, 6, 8
             move_straight(d, true)
@@ -1417,7 +1434,7 @@ unless OrangeMovement::Enabled == false
             move_diagonal(4, 8)
           when 9
             move_diagonal(6, 8)
-        end        
+        end
       end      
     end
 
@@ -1428,6 +1445,8 @@ unless OrangeMovement::Enabled == false
         if Auto_Avoid_Diagonally_Only_When_Dashing == true
           return false unless dash?
         end
+
+        return false if @avoid_diagonally_delay > 0
 
         if d == Direction.left || d == Direction.right
           if diagonal_passable?(@x, @y, d, Direction.down)
@@ -1457,6 +1476,8 @@ unless OrangeMovement::Enabled == false
         if Auto_Avoid_Offset_Only_When_Dashing == true
           return false unless dash?
         end
+
+        return false if @avoid_offset_delay > 0
 
         if d == Direction.left || d == Direction.right
           #If the player can't walk diagonally on the current position, but would be able to walk if he were a little higher or lower then move vertically instead
