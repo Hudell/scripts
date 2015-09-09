@@ -14,15 +14,15 @@ class Game_CharacterBase
     return false if debug_through?
     region = 0
     case d
-    when 1; region = $game_map.region_id((x - my_step_size).floor, (y + my_step_size).floor)
-    when 2; region = $game_map.region_id((x + 0).floor, (y + my_step_size).floor)
-    when 3; region = $game_map.region_id((x + my_step_size).floor, (y + my_step_size).floor)
-    when 4; region = $game_map.region_id((x - my_step_size).floor, (y + 0).floor)
-    when 5; region = $game_map.region_id((x + 0).floor, (y + 0).floor)
-    when 6; region = $game_map.region_id((x + my_step_size).floor, (y + 0).floor)
+    when 1; region = $game_map.region_id((x - my_step_size).floor, (y + my_step_size).ceil)
+    when 2; region = $game_map.region_id(x.floor, (y + my_step_size).ceil)
+    when 3; region = $game_map.region_id((x + my_step_size).ceil, (y + my_step_size).ceil)
+    when 4; region = $game_map.region_id((x - my_step_size).floor, y.floor)
+    when 5; region = $game_map.region_id(x.floor, y.floor)
+    when 6; region = $game_map.region_id((x + my_step_size).ceil, y.floor)
     when 7; region = $game_map.region_id((x - my_step_size).floor, (y - my_step_size).floor)
-    when 8; region = $game_map.region_id((x + 0).floor, (y - my_step_size).floor)
-    when 9; region = $game_map.region_id((x + my_step_size).floor, (y - my_step_size).floor)
+    when 8; region = $game_map.region_id(x.floor, (y - my_step_size).floor)
+    when 9; region = $game_map.region_id((x + my_step_size).ceil, (y - my_step_size).floor)
     end
     return true if $game_map.all_restrict_regions.include?(region)
     return false if @through
