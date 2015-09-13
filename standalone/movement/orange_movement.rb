@@ -5,10 +5,13 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 3.3
+# Version: 3.4
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v3.4: 2015-09-13
+# => Added Auto_Avoid_Ignore_Delay_When_Dashing setting
 #
 # v3.3: 2015-09-08
 # => Added Auto_Avoid_Diagonally_Delay and Auto_Avoid_Offset_Delay settings
@@ -124,6 +127,9 @@ module OrangeMovement
   Auto_Avoid_Diagonally_Delay = 0
   #How many frames to wait before executing the auto-avoid by offset
   Auto_Avoid_Offset_Delay = 0
+
+  #If true, the delay will not be applied when the player is dashing
+  Auto_Avoid_Ignore_Delay_When_Dashing = true
 
   #How many tiles the player can walk on a different direction to automatically avoid a blocked tile
   #Values smaller than the step size won't have any effect
@@ -1334,8 +1340,13 @@ unless OrangeMovement::Enabled == false
 
         if passable?(@x, @y, d) || passable?(@x, @y, alternative_d)
           #Restart the delay
-          @avoid_diagonally_delay = Auto_Avoid_Diagonally_Delay
-          @avoid_offset_delay = Auto_Avoid_Offset_Delay
+          if Auto_Avoid_Ignore_Delay_When_Dashing && dash?
+            @avoid_diagonally_delay = 0
+            @avoid_offset_delay = 0
+          else
+            @avoid_diagonally_delay = Auto_Avoid_Diagonally_Delay
+            @avoid_offset_delay = Auto_Avoid_Offset_Delay
+          end
 
           #Try the diagonal movement first
           unless OrangeMovement::Enable_Diagonal_Movement == false
