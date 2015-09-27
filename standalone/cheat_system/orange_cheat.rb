@@ -12,6 +12,8 @@
 module OrangeCheats
   # Main_Key = :tab
   Main_Key = nil
+  # If this is true, the script will wait for the player to release the main key before running a cheat
+  Wait_For_Main_Key_Release = true
   
   # 'cheat_code' => switch_id
   Cheat_Switch_List = {
@@ -29,31 +31,41 @@ module OrangeCheats
     end
   end
 
+  def self.check_typed_cheat
+    Cheat_Switch_List.keys.each do |key|
+      if @last_cheat.end_with?(key)
+        @last_cheat = ""
+
+        $game_switches[Cheat_Switch_List[key]] = true
+        return
+      end
+    end
+
+    if SceneManager.scene.is_a? Scene_Map
+      Cheat_Event_List.keys.each do |key|
+        if @last_cheat.end_with?(key)
+          @last_cheat = ""
+          $game_temp.reserve_common_event(Cheat_Event_List[key])
+          return
+        end
+      end
+    end
+  end
+
   def self.check_input
     @last_cheat = "" if @last_cheat.nil?
+
+    if Wait_For_Main_Key_Release && !Main_Key.nil?
+      if OrangeInput.release?(Main_Key)
+        check_typed_cheat
+        @last_cheat = ""
+      end
+    end
 
     if Main_Key.nil? || OrangeInput.press?(Main_Key)
       if OrangeInput.triggered_any?
         @last_cheat += get_key_description(OrangeInput.last_triggered_key)
-
-        Cheat_Switch_List.keys.each do |key|
-          if @last_cheat.end_with?(key)
-            @last_cheat = ""
-
-            $game_switches[Cheat_Switch_List[key]] = true
-            return
-          end
-        end
-
-        if SceneManager.scene.is_a? Scene_Map
-          Cheat_Event_List.keys.each do |key|
-            if @last_cheat.end_with?(key)
-              @last_cheat = ""
-              $game_temp.reserve_common_event(Cheat_Event_List[key])
-              return
-            end
-          end
-        end
+        check_typed_cheat unless !Main_Key.nil? && Wait_For_Main_Key_Release
       end
     else
       @last_cheat = ""
