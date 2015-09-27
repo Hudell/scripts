@@ -54,6 +54,7 @@ class Scene_SaveLoader < Scene_Base
     SceneManager.scene.fadeout_all
     if DataManager.load_game(GameLoader.game_index)
       Sound.play_load
+      $game_system.load_playtime
       $game_system.on_after_special_load
     else
       Sound.play_buzzer
@@ -67,7 +68,20 @@ class Game_System
   def on_after_special_load
     @bgm_on_save.play unless @bgm_on_save.nil?
     @bgs_on_save.play unless @bgm_on_save.nil?
-  end  
+  end
+
+  def load_playtime
+    Graphics.frame_count = @frames_on_save
+  end
+  
+  def reset_playtime
+    @frames_on_save = 0
+    Graphics.frame_count = 0
+  end
+  
+  def save_playtime
+    @frames_on_save = Graphics.frame_count
+  end
 end
 
 class Scene_SaveWriter < Scene_Base
