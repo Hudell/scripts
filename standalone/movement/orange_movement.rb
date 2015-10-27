@@ -5,10 +5,13 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 3.4
+# Version: 3.5
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v3.5: 2015-10-27
+# => Fixed a problem where the player sprite wouldn't change back to "walking" before entering a battle.
 #
 # v3.4: 2015-09-13
 # => Added Auto_Avoid_Ignore_Delay_When_Dashing setting
@@ -1147,7 +1150,7 @@ unless OrangeMovement::Enabled == false
 
         if actor
           #Change actor graphic if they are running or not
-          if dash? && (moving? || @was_moving)
+          if dash? && (moving? || @was_moving) && SceneManager.scene_is(Scene_Map)
             new_sprite_name = actor.dashing_sprite_name
             new_sprite_index = actor.dashing_sprite_index
           else
