@@ -1150,7 +1150,7 @@ unless OrangeMovement::Enabled == false
 
         if actor
           #Change actor graphic if they are running or not
-          if dash? && (moving? || @was_moving) && SceneManager.scene_is(Scene_Map)
+          if dash? && (moving? || @was_moving) && SceneManager.scene_is?(Scene_Map)
             new_sprite_name = actor.dashing_sprite_name
             new_sprite_index = actor.dashing_sprite_index
           else
