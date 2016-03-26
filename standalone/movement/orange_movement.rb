@@ -5,10 +5,13 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 3.5
+# Version: 3.6
 # You're free to use this script on any project
 #
 # Change Log:
+#
+# v3.6: 2016-03-26
+# => Fixed movement on looped maps
 #
 # v3.5: 2015-10-27
 # => Fixed a problem where the player sprite wouldn't change back to "walking" before entering a battle.
@@ -504,6 +507,17 @@ unless OrangeMovement::Enabled == false
       round_y(player_y_with_direction(y, d, step_size))
     end
 
+    def loop_passable?(x, y, d)
+      while (x < 0) 
+        x += width
+      end
+      while (y < 0)
+        y += height
+      end
+
+      return passable?(x % width, y % height, d)
+    end
+
     alias :hudell_orange_movement_check_passage :check_passage
     def check_passage(x, y, bit)
       if OrangeMovement::Map_Never_Passable_Region != false || OrangeMovement::Map_Always_Passable_Region != false
@@ -698,10 +712,22 @@ unless OrangeMovement::Enabled == false
       false
     end
 
+    def position_valid?(x, y)
+      unless $game_map.loop_vertical?
+        return false if y < 0 || y >= height
+      end
+
+      unless $game_map.loop_horizontal?
+        return false if x < 0 || x >= width
+      end
+
+      return true
+    end
+
     def tileset_passable?(x, y, d)
       x2 = $game_map.round_player_x_with_direction(x, d, my_step_size)
       y2 = $game_map.round_player_y_with_direction(y, d, my_step_size)
-      return false unless $game_map.valid?(x2, y2)
+      return false unless position_valid?(x2, y2)
 
       return true if @through || debug_through? || custom_through?
       return false unless map_passable?(x, y, d)
@@ -788,20 +814,20 @@ unless OrangeMovement::Enabled == false
           for new_x in the_x.floor..end_x.floor
 
 
-            return false unless $game_map.passable?(new_x, the_y.floor, Direction.up)
-            return false unless $game_map.passable?(new_x, destination_y.floor, Direction.down)
-            # return false unless $game_map.passable?(new_x, destination_y.floor, Direction.up)
+            return false unless $game_map.loop_passable?(new_x, the_y.floor, Direction.up)
+            return false unless $game_map.loop_passable?(new_x, destination_y.floor, Direction.down)
+            # return false unless $game_map.loop_passable?(new_x, destination_y.floor, Direction.up)
           end
         else
           for new_x in the_x.floor..end_x.floor
-            return false unless $game_map.passable?(new_x, the_y.floor, Direction.up) || $game_map.passable?(new_x, the_y.floor, Direction.down)
+            return false unless $game_map.loop_passable?(new_x, the_y.floor, Direction.up) || $game_map.loop_passable?(new_x, the_y.floor, Direction.down)
           end
         end
       else
         y_diff = y.floor - y
 
         if y_diff < step_size
-          return false unless $game_map.passable?(x.floor, y.floor, Direction.up)
+          return false unless $game_map.loop_passable?(x.floor, y.floor, Direction.up)
         end        
 
         if recursive
@@ -824,19 +850,19 @@ unless OrangeMovement::Enabled == false
 
         if the_x.floor != destination_x.floor
           for new_y in the_y.floor..end_y.floor
-            return false unless $game_map.passable?(the_x.floor, new_y, Direction.left)
-            return false unless $game_map.passable?(destination_x.floor, new_y, Direction.right)
+            return false unless $game_map.loop_passable?(the_x.floor, new_y, Direction.left)
+            return false unless $game_map.loop_passable?(destination_x.floor, new_y, Direction.right)
           end
         else
           for new_y in the_y.floor..end_y.floor
-            return false unless $game_map.passable?(the_x.floor, new_y, Direction.left) || $game_map.passable?(the_x.floor, new_y, Direction.right)
+            return false unless $game_map.loop_passable?(the_x.floor, new_y, Direction.left) || $game_map.loop_passable?(the_x.floor, new_y, Direction.right)
           end          
         end
       else
         x_diff = x.floor - x
 
         if x_diff < step_size
-          return false unless $game_map.passable?(x.floor, y.floor, Direction.left)
+          return false unless $game_map.loop_passable?(x.floor, y.floor, Direction.left)
         end
   
         if recursive
@@ -862,22 +888,22 @@ unless OrangeMovement::Enabled == false
 
         if end_y.floor != destination_end_y.floor
           for new_x in the_x.floor..end_x.floor
-            return false unless $game_map.passable?(new_x, end_y.floor, Direction.down)
-            return false unless $game_map.passable?(new_x, destination_end_y.floor, Direction.up)
+            return false unless $game_map.loop_passable?(new_x, end_y.floor, Direction.down)
+            return false unless $game_map.loop_passable?(new_x, destination_end_y.floor, Direction.up)
           end
         end
       else
-        return false unless $game_map.passable?(x.floor, y.floor, Direction.down)
-        return false unless $game_map.passable?(x.floor, y.floor + 1, Direction.up)
+        return false unless $game_map.loop_passable?(x.floor, y.floor, Direction.down)
+        return false unless $game_map.loop_passable?(x.floor, y.floor + 1, Direction.up)
 
         if x > x.floor
-          return false unless $game_map.passable?(x.floor + 1, y.floor, Direction.down)
+          return false unless $game_map.loop_passable?(x.floor + 1, y.floor, Direction.down)
           #I'm not sure if "y.floor + 1" is right, shouldn't it be y.ceil and only if that's different from y.floor?
-          return false unless $game_map.passable?(x.floor + 1, y.floor + 1, Direction.up)
+          return false unless $game_map.loop_passable?(x.floor + 1, y.floor + 1, Direction.up)
         end
 
         if y > y.floor && y + step_size >= y.ceil
-          return false unless $game_map.passable?(x.ceil, y.ceil, Direction.down)
+          return false unless $game_map.loop_passable?(x.ceil, y.ceil, Direction.down)
         end
   
         if recursive
@@ -902,25 +928,25 @@ unless OrangeMovement::Enabled == false
 
         if end_x.floor != destination_end_x.floor
           for new_y in the_y.floor..end_y.floor
-            return false unless $game_map.passable?(end_x.floor, new_y, Direction.right)
-            return false unless $game_map.passable?(destination_end_x.floor, new_y, Direction.left)
+            return false unless $game_map.loop_passable?(end_x.floor, new_y, Direction.right)
+            return false unless $game_map.loop_passable?(destination_end_x.floor, new_y, Direction.left)
           end
         end
       else
-        return false unless $game_map.passable?(x.floor, y.floor, Direction.right)
-        return false unless $game_map.passable?(x.floor + 1, y.floor, Direction.left)
+        return false unless $game_map.loop_passable?(x.floor, y.floor, Direction.right)
+        return false unless $game_map.loop_passable?(x.floor + 1, y.floor, Direction.left)
 
         if x > x.floor && x + step_size >= x.ceil
-          return false unless $game_map.passable?(x.ceil, y.floor, Direction.right)
+          return false unless $game_map.loop_passable?(x.ceil, y.floor, Direction.right)
         end
 
         if y > y.floor
-          return false unless $game_map.passable?(x.floor, y.ceil, Direction.right)
+          return false unless $game_map.loop_passable?(x.floor, y.ceil, Direction.right)
           #I'm not sure if "x.floor + 1" is right, shouldn't it be x.ceil and only if that's different from x.floor?
-          return false unless $game_map.passable?(x.floor + 1, y.ceil, Direction.left)
+          return false unless $game_map.loop_passable?(x.floor + 1, y.ceil, Direction.left)
 
           if y + step_size >= y.ceil
-            return false unless $game_map.passable?(x.floor, y.floor, Direction.right)
+            return false unless $game_map.loop_passable?(x.floor, y.floor, Direction.right)
           end
         end        
   
@@ -1695,10 +1721,10 @@ unless OrangeMovement::Enabled == false
         while position_has_region?(fall_x, fall_y, Auto_Jump_Fall_Down_Region) && position_has_region?(fall_x2, fall_y, Auto_Jump_Fall_Down_Region)
 
           #If it's an invalid tile, abort falling
-          return false if !$game_map.valid?(fall_x, fall_y.floor)
-          return false if !$game_map.valid?(fall_x2, fall_y.floor)
-          return false if !$game_map.valid?(fall_x, fall_y.ceil)
-          return false if !$game_map.valid?(fall_x2, fall_y.ceil)
+          return false if !position_valid?(fall_x, fall_y.floor)
+          return false if !position_valid?(fall_x2, fall_y.floor)
+          return false if !position_valid?(fall_x, fall_y.ceil)
+          return false if !position_valid?(fall_x2, fall_y.ceil)
 
           jump_y += 1
           fall_y = y + jump_y
@@ -1723,10 +1749,10 @@ unless OrangeMovement::Enabled == false
         #While the region doesn't change, keep falling
         while position_has_region?(fall_x, fall_y, Auto_Jump_Fall_Left_Region) && position_has_region?(fall_x, fall_y2, Auto_Jump_Fall_Left_Region)
           #If it's an invalid tile, abort falling
-          return false if !$game_map.valid?(fall_x.floor, fall_y)
-          return false if !$game_map.valid?(fall_x.floor, fall_y2)
-          return false if !$game_map.valid?(fall_x.ceil, fall_y)
-          return false if !$game_map.valid?(fall_x.ceil, fall_y2)
+          return false if !position_valid?(fall_x.floor, fall_y)
+          return false if !position_valid?(fall_x.floor, fall_y2)
+          return false if !position_valid?(fall_x.ceil, fall_y)
+          return false if !position_valid?(fall_x.ceil, fall_y2)
 
           jump_x -= 1
           fall_x = x + jump_x
@@ -1751,10 +1777,10 @@ unless OrangeMovement::Enabled == false
         #While the region doesn't change, keep falling
         while position_has_region?(fall_x, fall_y, Auto_Jump_Fall_Right_Region) && position_has_region?(fall_x, fall_y2, Auto_Jump_Fall_Right_Region)
           #If it's an invalid tile, abort falling
-          return false if !$game_map.valid?(fall_x.floor, fall_y)
-          return false if !$game_map.valid?(fall_x.floor, fall_y2)
-          return false if !$game_map.valid?(fall_x.ceil, fall_y)
-          return false if !$game_map.valid?(fall_x.ceil, fall_y2)
+          return false if !position_valid?(fall_x.floor, fall_y)
+          return false if !position_valid?(fall_x.floor, fall_y2)
+          return false if !position_valid?(fall_x.ceil, fall_y)
+          return false if !position_valid?(fall_x.ceil, fall_y2)
 
           jump_x += 1
           fall_x = x + jump_x
@@ -1779,8 +1805,8 @@ unless OrangeMovement::Enabled == false
         #While the region doesn't change, keep falling
         while position_has_region?(fall_x, fall_y, Auto_Jump_Fall_Up_Region) && position_has_region?(fall_x2, fall_y, Auto_Jump_Fall_Up_Region)
           #If it's an invalid tile, abort falling
-          return false if !$game_map.valid?(fall_x, fall_y)
-          return false if !$game_map.valid?(fall_x2, fall_y)
+          return false if !position_valid?(fall_x, fall_y)
+          return false if !position_valid?(fall_x2, fall_y)
 
           jump_y -= 1
           fall_y = y + jump_y
@@ -1812,8 +1838,8 @@ unless OrangeMovement::Enabled == false
         x3 = $game_map.round_x_with_direction(x2, d)
         y3 = $game_map.round_y_with_direction(y2, d)
 
-        return false unless $game_map.valid?(x2, y2)
-        return false unless $game_map.valid?(x3, y3)
+        return false unless position_valid?(x2, y2)
+        return false unless position_valid?(x3, y3)
 
         return true if @through || debug_through? || custom_through?
         return false unless map_passable?(x, y, d)
