@@ -5,7 +5,7 @@
 #------------------------------------------------------------
 #
 # Script created by Hudell (www.hudell.com)
-# Version: 3.6
+# Version: 3.6.1
 # You're free to use this script on any project
 #
 # Change Log:
@@ -712,22 +712,10 @@ unless OrangeMovement::Enabled == false
       false
     end
 
-    def position_valid?(x, y)
-      unless $game_map.loop_vertical?
-        return false if y < 0 || y >= height
-      end
-
-      unless $game_map.loop_horizontal?
-        return false if x < 0 || x >= width
-      end
-
-      return true
-    end
-
     def tileset_passable?(x, y, d)
       x2 = $game_map.round_player_x_with_direction(x, d, my_step_size)
       y2 = $game_map.round_player_y_with_direction(y, d, my_step_size)
-      return false unless position_valid?(x2, y2)
+      return false unless $game_map.valid?(x2, y2)
 
       return true if @through || debug_through? || custom_through?
       return false unless map_passable?(x, y, d)
@@ -1721,10 +1709,10 @@ unless OrangeMovement::Enabled == false
         while position_has_region?(fall_x, fall_y, Auto_Jump_Fall_Down_Region) && position_has_region?(fall_x2, fall_y, Auto_Jump_Fall_Down_Region)
 
           #If it's an invalid tile, abort falling
-          return false if !position_valid?(fall_x, fall_y.floor)
-          return false if !position_valid?(fall_x2, fall_y.floor)
-          return false if !position_valid?(fall_x, fall_y.ceil)
-          return false if !position_valid?(fall_x2, fall_y.ceil)
+          return false if !$game_map.valid?(fall_x, fall_y.floor)
+          return false if !$game_map.valid?(fall_x2, fall_y.floor)
+          return false if !$game_map.valid?(fall_x, fall_y.ceil)
+          return false if !$game_map.valid?(fall_x2, fall_y.ceil)
 
           jump_y += 1
           fall_y = y + jump_y
@@ -1749,10 +1737,10 @@ unless OrangeMovement::Enabled == false
         #While the region doesn't change, keep falling
         while position_has_region?(fall_x, fall_y, Auto_Jump_Fall_Left_Region) && position_has_region?(fall_x, fall_y2, Auto_Jump_Fall_Left_Region)
           #If it's an invalid tile, abort falling
-          return false if !position_valid?(fall_x.floor, fall_y)
-          return false if !position_valid?(fall_x.floor, fall_y2)
-          return false if !position_valid?(fall_x.ceil, fall_y)
-          return false if !position_valid?(fall_x.ceil, fall_y2)
+          return false if !$game_map.valid?(fall_x.floor, fall_y)
+          return false if !$game_map.valid?(fall_x.floor, fall_y2)
+          return false if !$game_map.valid?(fall_x.ceil, fall_y)
+          return false if !$game_map.valid?(fall_x.ceil, fall_y2)
 
           jump_x -= 1
           fall_x = x + jump_x
@@ -1777,10 +1765,10 @@ unless OrangeMovement::Enabled == false
         #While the region doesn't change, keep falling
         while position_has_region?(fall_x, fall_y, Auto_Jump_Fall_Right_Region) && position_has_region?(fall_x, fall_y2, Auto_Jump_Fall_Right_Region)
           #If it's an invalid tile, abort falling
-          return false if !position_valid?(fall_x.floor, fall_y)
-          return false if !position_valid?(fall_x.floor, fall_y2)
-          return false if !position_valid?(fall_x.ceil, fall_y)
-          return false if !position_valid?(fall_x.ceil, fall_y2)
+          return false if !$game_map.valid?(fall_x.floor, fall_y)
+          return false if !$game_map.valid?(fall_x.floor, fall_y2)
+          return false if !$game_map.valid?(fall_x.ceil, fall_y)
+          return false if !$game_map.valid?(fall_x.ceil, fall_y2)
 
           jump_x += 1
           fall_x = x + jump_x
@@ -1805,8 +1793,8 @@ unless OrangeMovement::Enabled == false
         #While the region doesn't change, keep falling
         while position_has_region?(fall_x, fall_y, Auto_Jump_Fall_Up_Region) && position_has_region?(fall_x2, fall_y, Auto_Jump_Fall_Up_Region)
           #If it's an invalid tile, abort falling
-          return false if !position_valid?(fall_x, fall_y)
-          return false if !position_valid?(fall_x2, fall_y)
+          return false if !$game_map.valid?(fall_x, fall_y)
+          return false if !$game_map.valid?(fall_x2, fall_y)
 
           jump_y -= 1
           fall_y = y + jump_y
@@ -1838,8 +1826,8 @@ unless OrangeMovement::Enabled == false
         x3 = $game_map.round_x_with_direction(x2, d)
         y3 = $game_map.round_y_with_direction(y2, d)
 
-        return false unless position_valid?(x2, y2)
-        return false unless position_valid?(x3, y3)
+        return false unless $game_map.valid?(x2, y2)
+        return false unless $game_map.valid?(x3, y3)
 
         return true if @through || debug_through? || custom_through?
         return false unless map_passable?(x, y, d)
